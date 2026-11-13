@@ -1,0 +1,12 @@
+# Short reference: original scenes remain available by name for regression builds.
+title: "Smoke Test: reusable CS layouts"
+slug: _smoke_test
+voice: Samantha
+rate: 180
+scenes:
+  - name: HighLevel
+    chapter: "Reusable layouts"
+  - name: QuickLegacy
+    chapter: "Original primitives"
+  - name: Beats
+    chapter: "Beat helpers"

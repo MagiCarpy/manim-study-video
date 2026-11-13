@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# study: entry point for the make-study-video skill. Works from any directory;
+# lessons live in ~/study-videos/lessons/<slug>/ (or --lessons-dir / $STUDY_LESSONS_DIR).
+#
+#   study setup [--fish] [--lfm3] [--proofread]  create/refresh the skill venv (--fish: + mlx-audio for Fish TTS,
+#                                         --lfm3: + torch/accelerate for LiquidAI LFM3-Audio TTS,
+#                                         --proofread: + mlx-whisper to proofread narration audio)
+#   study doctor                          check tools, venv, voice engines
+#   study ingest <deck.pdf|.pptx> <slug>  [--keynote] [--lessons-dir DIR]
+#   study build <slug|path> [-q l|m|h|h60|k] [--scene Name] [--frames [N]] [--engine say|fish|lfm3]
+#                         [--jobs N] [--cached-only] ...   (h = 1080p30 final, h60 = 1080p60)
+#   study narrate <slug|path> [...] [--engine say|fish|lfm3] [--scene Name] [--check] [--json F] [--lock DIR]
+#                                         one process/model load across lessons + timing reports
+#   study voice list | audition [--n 4] [--instruct ..] [--text ..] | save <name> <clip.wav> [--text ..]
+#               | proofread <lesson> [--recheck]   (Whisper check of voiced lines; narrate runs it)
+#                                         fish voice presets ($SKILL/voices/)
+#   study slides <lesson|collection> <range> [--sheet]   slide text + contact sheet for a slide range
+#   study scaffold collection|section ...  draft skeletons (--deck, --sections or --slides)
+#   study review <slug|path> [--lint] [--layout] [--sheet] [-q l|h]   draft review report
+#   study status <collection|lesson> [--json] [--verify]   read-only resume dashboard
+#   study api [cslib|base|style|tts|all] [--grep WORD]     generated helper index (signatures, constants)
+#   study digest <lesson|collection|source> [--slides R] [--check]   per-deck slide digest for planners
+#   study python ...                      run python inside the skill venv
+set -euo pipefail
+
+# Resolve this script's real location (follow symlinks) so the skill can live anywhere.
+src="${BASH_SOURCE[0]}"
+while [ -L "$src" ]; do
+  dir="$(cd -P "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  [[ "$src" != /* ]] && src="$dir/$src"
+done
+SKILL_DIR="$(cd -P "$(dirname "$src")/.." && pwd)"
+
+command -v uv >/dev/null || { echo "study: uv not found (brew install uv)" >&2; exit 1; }
+unset VIRTUAL_ENV  # an activated venv elsewhere must not hijack ours
+export PYTHONPATH="$SKILL_DIR${PYTHONPATH:+:$PYTHONPATH}"
+
+run() { exec uv run --quiet --project "$SKILL_DIR" python -P "$@"; }
+
+cmd="${1:-help}"
+[ $# -gt 0 ] && shift
+case "$cmd" in
+  setup)
+    # --inexact: adding one engine's extra never uninstalls another's.
+    extra=(--inexact)
+    for a in "$@"; do
+      case "$a" in
+        --fish) extra+=(--extra fish) ;;
+        --lfm3) extra+=(--extra lfm3) ;;
+        --proofread) extra+=(--extra proofread) ;;
+        *) echo "study setup: unknown option $a" >&2; exit 2 ;;
+      esac
+    done
+    exec uv sync --project "$SKILL_DIR" "${extra[@]}" ;;
+  ingest|build|doctor) run -m "studio.$cmd" "$@" ;;
+  narrate) run -m studio.build narrate "$@" ;;
+  voice) run -m studio.voices "$@" ;;
+  slides) run -m studio.slides "$@" ;;
+  scaffold) run -m studio.scaffold "$@" ;;
+  review) run -m studio.review "$@" ;;
+  status) run -m studio.status "$@" ;;
+  api) run -m studio.api "$@" ;;
+  digest) run -m studio.digest "$@" ;;
+  python) run "$@" ;;
+  help|-h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *) echo "study: unknown command '$cmd' (try: study help)" >&2; exit 2 ;;
+esac

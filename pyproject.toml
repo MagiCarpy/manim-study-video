@@ -1,0 +1,36 @@
+[project]
+name = "study-video-studio"
+version = "0.1.0"
+description = "make-study-video skill: slides -> narrated, animated 3Blue1Brown-style study videos (Manim + offline TTS)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "manim>=0.18",
+    "manim-voiceover>=0.3",
+    "pymupdf>=1.24",
+    "python-pptx>=1.0",
+    "pyyaml>=6.0",
+    "pillow<12",  # manim 0.22 ImageMobject rendering breaks on Pillow 12+ (fromarray mode change)
+]
+
+[project.optional-dependencies]
+# Local Fish Audio S2 Pro narration on Apple Silicon (`study setup --fish`).
+# Coexists with the manim/pillow<12 pins in one venv (tested with mlx-audio 0.6.2).
+fish = [
+    "mlx-audio>=0.6.2",
+]
+# Local LiquidAI LFM3-Audio-2B narration (`study setup --lfm3`): PyTorch on MPS + the
+# model's own remote code (pinned revision, offline HF cache). Resolves alongside the
+# fish extra without changing any locked version (transformers 5.21 is shared).
+lfm3 = [
+    "torch>=2.10",
+    "accelerate>=1.10",
+    "transformers>=5.20.2",
+]
+# Narration proofreading (`study setup --proofread`): Whisper large-v3-turbo on MLX transcribes
+# each voiced line so `study narrate` can flag misread words. Apple Silicon only.
+proofread = [
+    "mlx-whisper>=0.4.2",
+]
+
+[tool.uv]
+package = false

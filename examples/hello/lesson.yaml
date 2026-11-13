@@ -1,0 +1,8 @@
+title: A packet journey
+slug: hello
+voice: Samantha
+rate: 175
+scenes:
+  - name: PacketJourney
+    chapter: A packet journey
+    storyboard: Define a packet, then show it moving from sender to receiver.

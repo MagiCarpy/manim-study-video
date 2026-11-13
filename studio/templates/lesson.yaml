@@ -1,0 +1,45 @@
+# Copy to <project>/lessons/<slug>/lesson.yaml. Scenes render and concatenate in this order;
+# each `name` must be a StudyScene subclass in lessons/<slug>/scenes.py.
+title: "Lesson title shown in chapters/transcript"
+slug: my-lesson
+# Narration engine (see SKILL.md "Voices"). Default: local LiquidAI LFM3-Audio-2B, British male
+# `lfm3_uk_male_narrator` preset (user-chosen; ~0.55 s compute per audio-second, no cloning).
+# License: LFM Open License v1.0 (no commercial use by entities with >= $10M annual revenue).
+# For instant drafts: `study build <slug> --engine say` (or `voice: Samantha` + `rate: 175`).
+# Fish Audio S2 Pro clone of the `narrator` preset (~1.7 s per audio-second, research/
+# non-commercial license): one line,
+#   voice: {engine: fish, preset: narrator}
+voice:
+  engine: lfm3
+  preset: lfm3_uk_male_narrator   # $SKILL/voices/<name>.yaml (`study voice list`)
+# Other lfm3 options: speed: 1.0 (pitch-preserving tempo), pause_ms: 350 ([pause] silence),
+#   lufs: -18 (per-clip loudness), or explicit locale: en-GB, gender: male, seed: 4
+# Fish options (with engine: fish):
+#   speed: 1.0           # pitch-preserving tempo change
+#   temperature: 0.7
+#   top_p: 0.7
+#   seed: 0
+#   ref_audio: voice/me.wav                        # optional: clone this clip instead of the preset
+#   ref_text: "Exact words spoken in the clip."    # required with ref_audio
+#   instruct: "warm, clear university lecturer"   # optional; weak effect, needs a reference
+target_minutes: 10
+audience: "undergrad CS"
+sources:               # slide decks / notes this lesson is based on
+  - source/slides.md
+scenes:
+  - name: Hook
+    chapter: "Why this matters"
+    # storyboard: one or two lines on what's shown + which slides it covers
+    storyboard: "Motivating problem; slide 1 excerpt"
+  - name: CoreIdea
+    chapter: "The core idea"
+    storyboard: "Slides 2-4: mechanism, animated with cslib"
+  - name: WorkedExample
+    chapter: "Worked example"
+    storyboard: "Step-by-step trace from notes.md event sequence"
+  - name: Misconceptions
+    chapter: "Common pitfalls"
+    storyboard: "Two misconceptions and why they are wrong"
+  - name: Recap
+    chapter: "Recap"
+    storyboard: "Summary table + 3 bullets"
