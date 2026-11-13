@@ -12,7 +12,7 @@ brew install uv ffmpeg cairo pango pkgconf
 
 Optional engines require additional packages and large upstream models. Ask before installing/downloading anything; `uv.lock` records the supported dependency set. Runtime loading is offline and never fetches missing weights. Model licenses are separate from code and may restrict usage: read the terms distributed with the exact checkpoint before use. No model weights, platform fonts or reference recordings are bundled.
 
-- `"$STUDY" setup --lfm3`: PyTorch/Transformers LFM3 support; production default is `lfm3_uk_male_narrator`.
+- `"$STUDY" setup --lfm3`: installs PyTorch/Transformers dependencies, not weights. Follow [README local LFM3 setup](../README.md#local-lfm3-narration-recommended-final-voice) for existing-cache detection, the explicit pinned download, and a copy-paste agent setup prompt. Production default is `lfm3_uk_male_narrator`.
 - `"$STUDY" setup --fish`: optional Apple Silicon Fish/MLX support; requires an authorized reference clip/preset.
 - `"$STUDY" setup --proofread`: optional Apple Silicon Whisper proofreading. `study narrate` uses it when installed; `study voice proofread <lesson>` rechecks existing audio.
 - `say`: macOS system voice for fast drafts, no model download. Use `say -v '?'` to list installed voices. It is not a silent replacement for final LFM3 audio.

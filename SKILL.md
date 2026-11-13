@@ -9,13 +9,13 @@ Section workers: read [references/worker-card.md](references/worker-card.md) and
 
 ## Paths and defaults
 
-Resolve `SKILL` to the installed directory containing this file; set `STUDY="$SKILL/bin/study"`. Run commands through this wrapper. Reusable code lives in `studio/`; presets in `voices/`; examples in `examples/hello/`. Use `study api --grep WORD` for helper signatures; inspect studio source only to diagnose a specific failure.
+Resolve `SKILL` to the installed directory containing this file; set `STUDY="$SKILL/bin/study"`. Invoke it as `"$STUDY"`, including in generated briefs: quoting the assignment alone does not prevent execution-time word splitting. Regression-test generated commands with both installation and project paths containing spaces. Reusable code lives in `studio/`; presets in `voices/`; examples in `examples/hello/`. Use `study api --grep WORD` for helper signatures; inspect studio source only to diagnose a specific failure.
 
 New projects live in `~/study-videos/lessons/`; keep editable sources, captions, renders and accepted revisions together. Maintain `~/study-videos/library/` and `VIDEO-LIBRARY.md` for browsing. `STUDY_HOME` changes the workspace root; explicit lesson paths, `--lessons-dir` and `STUDY_LESSONS_DIR` take precedence. Never relocate or rewrite existing projects unless requested.
 
 A lesson contains `source/`, `notes.md`, `lesson.yaml`, `script.md`, `scenes.py`, `checkpoint.yaml` and `build/`. Collections also have `collection.yaml`, `brief.md` and `sections/`. Explicit lesson paths, `--lessons-dir` or `$STUDY_LESSONS_DIR` override the default `~/study-videos/lessons/<slug>/`.
 
-- **Voice:** local `lfm3`, preset `lfm3_uk_male_narrator` (British male). Fish `narrator` only on request; `say` for fast drafts. Voice settings, licenses, setup and auditions: [voices.md](references/voices.md).
+- **Voice:** local `lfm3`, preset `lfm3_uk_male_narrator` (British male). Fish `narrator` only on request; `say` for fast drafts. First-time local setup and an agent setup prompt: [README](README.md#local-lfm3-narration-recommended-final-voice). Voice settings, licenses and auditions: [voices.md](references/voices.md).
 - **Scope:** one standalone video per conceptual section, then a combined lesson unless separate-only is requested. Retain section videos and resume independently.
 - **Audience/pacing:** undergrad CS, intuition before detail; hook → idea → example → misconceptions → recap. About 1 minute/content slide, 30–45 minutes/full lecture; short inputs 8–15 minutes, sections 2–4 minutes, scenes ≤2.5 minutes. Respect explicit user budgets.
 - **Routing:** use the starting provider's role column and bidirectional fallback table in [roles.md](references/roles.md). Explicit user choices override project `CLAUDE.md` preferences, then skill defaults. TTS, builds and deterministic checks are scripts, not waiting agents.
@@ -24,29 +24,29 @@ A lesson contains `source/`, `notes.md`, `lesson.yaml`, `script.md`, `scenes.py`
 ## Commands and outputs
 
 ```sh
-STUDY=$SKILL/bin/study
-$STUDY doctor
-$STUDY status <collection|lesson> --verify       # 0 ready; 1 unfinished; 2 errors; --json for automation
-$STUDY api [cslib|base|style|tts|all] --grep WORD
-$STUDY ingest <deck.pdf|deck.pptx> <slug>         # PPTX --keynote tries Keynote, then LibreOffice
-$STUDY scaffold collection <slug> --deck <deck> --sections "01-intro:1-3,02-core:4-7"
-$STUDY scaffold section <slug> --deck <deck> --slides 1-3
-$STUDY slides <lesson> 1-7 --sheet
-$STUDY digest <collection>                     # complete source/digest.md, then --check
-$STUDY build <lesson> --engine say --jobs 2 --frames 4
-$STUDY review <lesson> --lint --layout --sheet
-$STUDY narrate <section-a> <section-b>           # one process/model load; --check writes/synthesizes nothing
-$STUDY build <lesson> -q h --cached-only --jobs 2
-$STUDY build <lesson> --scene Name --frames 6    # repeat --scene for targeted repairs
-$STUDY build <lesson> -q h --no-render           # assemble existing clips; verify freshness first
-$STUDY review <lesson> -q h --lint --sheet       # existing final renders; layout remains a say draft check
-$STUDY voice proofread <lesson>
-$STUDY python -c '...'                         # installed skill environment
+STUDY="$SKILL/bin/study"
+"$STUDY" doctor
+"$STUDY" status <collection|lesson> --verify       # 0 ready; 1 unfinished; 2 errors; --json for automation
+"$STUDY" api [cslib|base|style|tts|all] --grep WORD
+"$STUDY" ingest <deck.pdf|deck.pptx> <slug>         # PPTX --keynote tries Keynote, then LibreOffice
+"$STUDY" scaffold collection <slug> --deck <deck> --sections "01-intro:1-3,02-core:4-7"
+"$STUDY" scaffold section <slug> --deck <deck> --slides 1-3
+"$STUDY" slides <lesson> 1-7 --sheet
+"$STUDY" digest <collection>                     # complete source/digest.md, then --check
+"$STUDY" build <lesson> --engine say --jobs 2 --frames 4
+"$STUDY" review <lesson> --lint --layout --sheet
+"$STUDY" narrate <section-a> <section-b>           # one process/model load; --check writes/synthesizes nothing
+"$STUDY" build <lesson> -q h --cached-only --jobs 2
+"$STUDY" build <lesson> --scene Name --frames 6    # repeat --scene for targeted repairs
+"$STUDY" build <lesson> -q h --no-render           # assemble existing clips; verify freshness first
+"$STUDY" review <lesson> -q h --lint --sheet       # existing final renders; layout remains a say draft check
+"$STUDY" voice proofread <lesson>
+"$STUDY" python -c '...'                         # installed skill environment
 ```
 
 Final: `build/<slug>.mp4`, `captions.srt`, `transcript.md`, `chapters.txt`; author `sources.md` separately. Scene clips: `build/media/videos/scenes/<quality>/`; audio cache: `build/media/voiceovers/`. `-q h` is 1080p30; `h60` 1080p60, `m` 720p30, `k` 4K. Drafts (`-q l` or an engine different from the lesson's) assemble into `build/draft/`, including layout review; never replace the final. Accepted `deliverables/` revisions and checkpoints are durable; `build/` is a working cache.
 
-New Mac: `brew install uv ffmpeg cairo pango pkgconf`, then `$STUDY setup` and `doctor`. Optional engines/dependencies: [voices.md](references/voices.md). PPTX/image fallback and scaffolding: [scaffold.md](references/scaffold.md). Environment failures: [gotchas.md](references/gotchas.md).
+New Mac: `brew install uv ffmpeg cairo pango pkgconf`, then `"$STUDY" setup` and `doctor`. Optional engines/dependencies: [voices.md](references/voices.md). PPTX/image fallback and scaffolding: [scaffold.md](references/scaffold.md). Environment failures: [gotchas.md](references/gotchas.md).
 
 ## 1. Prepare and scope
 
@@ -117,7 +117,7 @@ Automated PASS covers only selected checks; it cannot establish teaching, source
 
 ## 5. Generate final narration
 
-After authorization and script freeze, queue all sections in one `narrate A B C --lock $L/tts --owner narrator` process. One TTS slot, no waiting LLM agent. Voice in every `lesson.yaml` must match the intended engine/preset. `narrate` runs construct on a dry clock, populates the render cache and reports duration, cache status, silence, motion and overruns; `--check` does not synthesize or write.
+After authorization and script freeze, queue all sections in one `narrate A B C --lock "$L/tts" --owner narrator` process. One TTS slot, no waiting LLM agent. Voice in every `lesson.yaml` must match the intended engine/preset. `narrate` runs construct on a dry clock, populates the render cache and reports duration, cache status, silence, motion and overruns; `--check` does not synthesize or write.
 
 Triage `build/proofread/report.md` against complete transcripts before rendering flagged scenes; unaffected frozen sections may render while triage runs. ASR may miss dropped repeated bits or invent mismatches from currency/ordinal formatting. Escalate numerical/semantic risks; regenerate only approved changed blocks, then affected scenes. Avoid opening with bare letters/acronyms or using acronyms as verbs; engine-specific pronunciation fixes belong in [voices.md](references/voices.md), not phonetic captions.
 
