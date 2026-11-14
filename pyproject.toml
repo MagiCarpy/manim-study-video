@@ -1,6 +1,8 @@
 [project]
 name = "study-video-studio"
 version = "0.1.0"
+license = "MIT"
+license-files = ["LICENSE"]
 description = "make-study-video skill: slides -> narrated, animated 3Blue1Brown-style study videos (Manim + offline TTS)"
 requires-python = ">=3.12,<3.13"
 dependencies = [

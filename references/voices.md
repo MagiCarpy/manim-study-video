@@ -17,7 +17,7 @@ Optional engines require additional packages and large upstream models. Ask befo
 - `"$STUDY" setup --proofread`: optional Apple Silicon Whisper proofreading. `study narrate` uses it when installed; `study voice proofread <lesson>` rechecks existing audio.
 - `say`: macOS system voice for fast drafts, no model download. Use `say -v '?'` to list installed voices. It is not a silent replacement for final LFM3 audio.
 
-Model IDs/revisions and cache checks are defined in `studio/tts.py`; use `doctor` to check availability. Keep weights in the normal model cache, never the repository. Other operating systems and hardware require their own compatibility checks; optional MLX dependencies are Apple Silicon-specific.
+Model IDs/revisions and cache checks are defined in `studio/tts.py`; use `doctor --engine lfm3` to require LFM3 availability (no synthesis). Keep weights in the normal model cache, never the repository. Other operating systems and hardware require their own compatibility checks; optional MLX dependencies are Apple Silicon-specific.
 
 ## Select a voice
 

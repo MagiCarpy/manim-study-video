@@ -53,7 +53,7 @@ HF_HUB_OFFLINE=0 "$STUDY" python -c \
 
 This uses the runtime's pinned revision rather than downloading a floating `main`. The temporary online setting applies only to this download process. If access is denied or authentication/acceptance is required, complete the upstream access flow yourself; never paste a token into the agent conversation or commit one. Do not replace the pinned model/revision just to bypass an error.
 
-Then run `"$STUDY" doctor` and repeat the cache check. Doctor/cache success establishes availability, not successful synthesis; verify a short real LFM3 clip before attempting a lecture. Runtime model loading remains offline and does not fetch missing weights.
+Then run `"$STUDY" doctor --engine lfm3` and repeat the cache check. Doctor/cache success establishes availability, not successful synthesis; verify a short real LFM3 clip before attempting a lecture. Runtime model loading remains offline and does not fetch missing weights.
 
 ### Select the voice and generate
 
@@ -81,7 +81,7 @@ Run only one real TTS process at a time; for several sections, pass them togethe
 
 ### Copy-paste prompt for your agent
 
-> Set up this checkout's local LFM3 narration using this README and SKILL.md. First inspect the platform, available disk/memory, installed dependencies, and the model ID/revision in studio/tts.py. Explain the model terms and that loading executes pinned upstream Python code; ask my approval before installing packages or downloading weights. Reuse my existing compatible Hugging Face cache if present; otherwise use the exact pinned download command above, outside the repository. Do not connect a paid API, change the pinned model, start a TTS server or silently fall back to say. After setup, run doctor and the offline cache check. Copy examples/hello into a NEW isolated lesson folder without overwriting anything, replace its voice setting with the LFM3 preset above, and synthesize only that short example to verify actual LFM3 output. Probe the real audio and report its path, duration, device and checks actually performed; ask me to listen if you cannot. Do not regenerate existing lectures, download optional Fish/Whisper models, publish anything or add weights/audio/credentials to Git. Stop and report any compatibility or access blocker rather than inventing success.
+> Set up this checkout's local LFM3 narration using this README and SKILL.md. First inspect the platform, available disk/memory, installed dependencies, and the model ID/revision in studio/tts.py. Explain the model terms and that loading executes pinned upstream Python code; ask my approval before installing packages or downloading weights. Reuse my existing compatible Hugging Face cache if present; otherwise use the exact pinned download command above, outside the repository. Do not connect a paid API, change the pinned model, start a TTS server or silently fall back to say. After setup, run doctor --engine lfm3 and the offline cache check. Copy examples/hello into a NEW isolated lesson folder without overwriting anything, replace its voice setting with the LFM3 preset above, and synthesize only that short example to verify actual LFM3 output. Probe the real audio and report its path, duration, device and checks actually performed; ask me to listen if you cannot. Do not regenerate existing lectures, download optional Fish/Whisper models, publish anything or add weights/audio/credentials to Git. Stop and report any compatibility or access blocker rather than inventing success.
 
 ## Workspace
 
@@ -101,7 +101,31 @@ This self-authored example uses shapes/text and macOS Samantha. Drafts go into `
 
 ## Agent installation and checks
 
-Expose this directory through your agent's supported skill mechanism. Keep one checkout as the source of truth; the CLI locates its own code. No particular username, clone path or Hermes profile is required. Share tracked Git files or a Git-generated archive, not a ZIP of your working directory: ignored local audio and environments may still be present.
+Keep one checkout as the source of truth; `$SKILL` must be its absolute path. The CLI locates its own code. Choose one discovery method; do not install duplicate copies with the same skill name.
+
+**Any file-capable agent:** open the checkout as your working folder and ask: “Read SKILL.md in this checkout, follow its linked references only when needed, and help me complete the README setup. Use my existing authorized model connection; do not change providers or buy credits.” This works without automatic skill discovery.
+
+**Codex / Claude Code:** both support symlinked skill directories. Choose the relevant user-level skills directory below, then register the existing checkout without overwriting anything:
+
+```sh
+SKILLS_DIR="$HOME/.agents/skills"       # Codex
+# SKILLS_DIR="$HOME/.claude/skills"     # Claude Code: use this instead
+DEST="$SKILLS_DIR/make-study-video"
+if [ -e "$DEST" ] || [ -L "$DEST" ]; then
+  printf 'Already exists: %s; inspect it instead of overwriting.\n' "$DEST"
+else
+  mkdir -p "$SKILLS_DIR"
+  ln -s "$SKILL" "$DEST"
+fi
+```
+
+Restart/reload the agent if necessary and explicitly request `make-study-video`; verify it reads this checkout's SKILL.md. Upstream discovery rules: [Codex](https://developers.openai.com/codex/skills), [Claude Code](https://code.claude.com/docs/en/skills).
+
+**Hermes:** ask its agent to add the parent of this checkout to `skills.external_dirs` for the active profile using `hermes config set`, preserving existing entries and asking approval before changing configuration. For example, a checkout at `~/agent-skills/make-study-video` uses `~/agent-skills` as its discovery root. Do not overwrite config.yaml or create a shadow copy; confirm the loaded skill path with `skill_view`. [Hermes shared-skill discovery](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills).
+
+Model/provider authentication is separate from TTS setup. Use your agent's own sign-in flow; do not put credentials in this repo or assume every model named in the role table is available to your account.
+
+No particular username, clone path or Hermes profile is required. Share tracked Git files or a Git-generated archive, not a ZIP of your working directory: ignored local audio and environments may still be present.
 
 ```sh
 "$STUDY" python -m unittest discover -s "$SKILL/tests" -v
@@ -109,6 +133,32 @@ Expose this directory through your agent's supported skill mechanism. Keep one c
 
 Correctness tests do not require rendering a lecture. Do not overwrite accepted projects to validate pipeline changes.
 
+## Updates and releases
+
+For a Git clone, inspect `git -C "$SKILL" status --short` first. If it has local edits, resolve them deliberately before updating; never use reset/clean to erase them. With a clean checkout and a configured remote:
+
+```sh
+git -C "$SKILL" pull --ff-only
+"$STUDY" setup --lfm3              # or setup without extras if you only use say
+"$STUDY" doctor --engine lfm3      # or --engine say
+"$STUDY" python -m unittest discover -s "$SKILL/tests" -v
+git -C "$SKILL" rev-parse HEAD     # record the generation-code revision
+```
+
+A ZIP download has no Git remote: get a new source archive and install it into a new directory, then intentionally update your skill registration. Do not overlay or delete an old working checkout. Keep projects/caches outside the code checkout. Updates do not authorize re-narrating or re-rendering existing projects; if the pinned model changes, review terms and approve the new download explicitly. For reproducibility, use a known commit/tag with its committed `uv.lock`; do not upgrade dependencies independently to fix an unexplained failure.
+
+## Automated checks
+
+The GitHub Actions workflow runs locked base installation, public unit tests, and a tiny macOS say render with lint and full audio/video decode. It has read-only repository permissions, does not install optional TTS models and does not use private benchmark data. It runs on pushes, pull requests and manual dispatch after you publish the repository; merely adding the workflow does not mean a hosted run has passed.
+
+Run the same integration check locally in a NEW isolated output directory (the command refuses an existing directory):
+
+```sh
+"$STUDY" python "$SKILL/tests/smoke.py" --work-dir "$HOME/study-videos/checks/new-say-smoke"
+```
+
+`doctor --engine lfm3` makes missing LFM3 dependencies/cache a failure rather than an optional warning; repeat `--engine` to require several engines. Doctor does not load/synthesize a model, certify audio quality or guarantee hardware capacity. The smoke check uses say; separately validate one short real LFM3 example before a long project. This snapshot was exercised in fresh base-only and LFM3 Python environments on an existing Mac, reusing installed native tools and the pinned model cache; that is not a new-machine or first-download certification. Hosted Actions execution still requires publication. Support target remains macOS; other OS/GPU combinations are not certified.
+
 ## License status
 
-A redistribution license for this project's own code has **not yet been selected**. Resolve that before calling this a completed open-source release. Dependency/model/asset licenses are separate; see [third-party notes](THIRD_PARTY.md). Setup does not publish or configure a remote repository.
+This project's original code is distributed under the [MIT License](LICENSE), attributed to **make-study-video contributors**. Dependency, upstream modeling-code/checkpoint and asset licenses remain separate; see [third-party notes](THIRD_PARTY.md). MIT does not relicense third-party materials or certify their compatibility for your use/distribution. Setup does not publish or configure a remote repository.

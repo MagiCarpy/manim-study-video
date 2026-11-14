@@ -787,7 +787,7 @@ def engine_status() -> dict[str, str]:
     if importlib.util.find_spec("torch") is None or importlib.util.find_spec("transformers") is None:
         lfm3 = "missing: run `study setup --lfm3`"
     elif lfm3_model_path() is None:
-        lfm3 = f"missing: {LFM3_MODEL}@{LFM3_REVISION[:8]} not in HF cache (`hf download {LFM3_MODEL}`, ~4.2 GB)"
+        lfm3 = f"missing: {LFM3_MODEL}@{LFM3_REVISION[:8]} not in HF cache (`hf download {LFM3_MODEL} --revision {LFM3_REVISION}`, ~4.2 GB)"
     else:
         lfm3 = f"ok ({LFM3_MODEL}@{LFM3_REVISION[:8]}, cached)"
     return {"say": say, "fish": fish, "lfm3": lfm3}

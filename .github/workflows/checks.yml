@@ -1,0 +1,30 @@
+name: Generation checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      HF_HUB_OFFLINE: '1'
+      TRANSFORMERS_OFFLINE: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Native dependencies
+        run: brew install uv ffmpeg cairo pango pkgconf
+      - name: Locked base environment (no optional models)
+        run: uv sync --locked
+      - name: Public unit tests
+        run: bin/study python -m unittest discover -s tests -v
+      - name: Tiny say render, lint and full decode
+        run: bin/study python tests/smoke.py --work-dir "$RUNNER_TEMP/study-smoke-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"

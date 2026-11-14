@@ -25,7 +25,7 @@ A lesson contains `source/`, `notes.md`, `lesson.yaml`, `script.md`, `scenes.py`
 
 ```sh
 STUDY="$SKILL/bin/study"
-"$STUDY" doctor
+"$STUDY" doctor                                # add --engine lfm3 to require it; no synthesis
 "$STUDY" status <collection|lesson> --verify       # 0 ready; 1 unfinished; 2 errors; --json for automation
 "$STUDY" api [cslib|base|style|tts|all] --grep WORD
 "$STUDY" ingest <deck.pdf|deck.pptx> <slug>         # PPTX --keynote tries Keynote, then LibreOffice

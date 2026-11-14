@@ -1,12 +1,12 @@
 # Slide packs and project scaffolds
 
-Run from the project root using `STUDY=$SKILL/bin/study`.
+Run from the project root using `STUDY="$SKILL/bin/study"`.
 
 ```sh
-$STUDY slides lessons/ip-forwarding-s16-31 16-17 --sheet
-$STUDY slides lessons/ip-forwarding-s16-31/source 26-30 --sheet ./lookup.png --cols 2 --json
-$STUDY scaffold collection forwarding-part2 --deck lessons/ip-forwarding-s16-31/source --sections '05-longest-prefix:16-17, 06-routing:18-19' --title 'IP Forwarding, Part 2' --deck-title 'IP Forwarding' --voice lfm3 lfm3_uk_male_narrator --minutes 15
-$STUDY scaffold section forwarding-prefix --deck lessons/ip-forwarding-s16-31/source --slides 16-17 --minutes 3
+"$STUDY" slides lessons/ip-forwarding-s16-31 16-17 --sheet
+"$STUDY" slides lessons/ip-forwarding-s16-31/source 26-30 --sheet ./lookup.png --cols 2 --json
+"$STUDY" scaffold collection forwarding-part2 --deck lessons/ip-forwarding-s16-31/source --sections '05-longest-prefix:16-17, 06-routing:18-19' --title 'IP Forwarding, Part 2' --deck-title 'IP Forwarding' --voice lfm3 lfm3_uk_male_narrator --minutes 15
+"$STUDY" scaffold section forwarding-prefix --deck lessons/ip-forwarding-s16-31/source --slides 16-17 --minutes 3
 ```
 
 `slides` accepts a lesson, collection, source directory or lesson slug, and comma-separated
@@ -42,5 +42,5 @@ Force replaces only generated files/symlinks; it refuses real existing source di
 symlinked output files. Use a fresh output path when re-ingesting a source deck.
 
 ```sh
-$STUDY build lessons/forwarding-part2/sections/05-longest-prefix --engine say --jobs 2 --lock ~/.cache/study-locks/forwarding-part2/cpu1 --lock ~/.cache/study-locks/forwarding-part2/cpu2 --owner 05-longest-prefix
+"$STUDY" build lessons/forwarding-part2/sections/05-longest-prefix --engine say --jobs 2 --lock ~/.cache/study-locks/forwarding-part2/cpu1 --lock ~/.cache/study-locks/forwarding-part2/cpu2 --owner 05-longest-prefix
 ```

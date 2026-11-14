@@ -7,6 +7,7 @@ Exit status 0 when all required pieces are present (optional ones only warn).
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import platform
 import re
@@ -25,6 +26,10 @@ def _run(cmd: list[str]) -> str | None:
 
 
 def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--engine", action="append", choices=("say", "fish", "lfm3"),
+                        help="Require this engine (repeatable); default requires say only. Does not synthesize.")
+    args = parser.parse_args(argv)
     ok = True
 
     def check(name: str, good: bool, detail: str = "", required: bool = True) -> None:
@@ -64,7 +69,7 @@ def main(argv=None) -> int:
     print("\nVoice engines (lesson.yaml `voice: {engine: ...}`)")
     from studio.tts import engine_status
     for name, status in engine_status().items():
-        check(name, status.startswith("ok"), status, required=(name == "say"))
+        check(name, status.startswith("ok"), status, required=(name in args.engine if args.engine else name == "say"))
     from studio import proofread
     why = proofread.available()
     check("proofread", why is None, why or f"ok ({proofread.MODEL}; runs after `study narrate`)", required=False)

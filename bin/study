@@ -5,7 +5,7 @@
 #   study setup [--fish] [--lfm3] [--proofread]  create/refresh the skill venv (--fish: + mlx-audio for Fish TTS,
 #                                         --lfm3: + torch/accelerate for LiquidAI LFM3-Audio TTS,
 #                                         --proofread: + mlx-whisper to proofread narration audio)
-#   study doctor                          check tools, venv, voice engines
+#   study doctor [--engine say|fish|lfm3]   check tools, venv; require selected engine
 #   study ingest <deck.pdf|.pptx> <slug>  [--keynote] [--lessons-dir DIR]
 #   study build <slug|path> [-q l|m|h|h60|k] [--scene Name] [--frames [N]] [--engine say|fish|lfm3]
 #                         [--jobs N] [--cached-only] ...   (h = 1080p30 final, h60 = 1080p60)
