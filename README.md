@@ -1,164 +1,130 @@
-# make-study-video
+# manim-study-video
 
-An agent skill and local Python/Manim CLI for turning slides or notes into narrated study videos. Includes planning, animation helpers, speech checks, captions, chapters, sources and section assembly. Independent project; not affiliated with 3Blue1Brown.
+Turn lecture slides, notes or a topic into narrated Manim study videos with your AI agent. **Designed for a new Mac user who wants Claude Code, Antigravity, Codex or another local agent to download and set everything up.** You do not need an existing TTS installation or Hugging Face experience. Independent project; not affiliated with 3Blue1Brown.
 
-## Contents
+## Start here: ask your agent
 
-`SKILL.md` and generation references; `bin/study` and `studio/`; dependency lockfile; configurable voice presets; source-only examples and correctness tests. No credentials, personal lectures, reference recordings, developer telemetry, profiling tools or historical datasets are distributed. The CLI requires no Hermes plugin or developer addon. Agent/provider access is supplied separately by the user.
+Copy this into your agent and replace the URL placeholder with the actual GitHub repository URL from this project's page. Do not guess a repository owner.
 
-## Setup (tested on macOS)
+```text
+Please install and set up manim-study-video from:
+PASTE_GITHUB_REPOSITORY_URL_HERE
 
-```sh
-brew install uv ffmpeg cairo pango pkgconf
-export SKILL="/path/to/make-study-video"   # your installed checkout
-export STUDY="$SKILL/bin/study"
-"$STUDY" setup
-"$STUDY" doctor
+I am on a Mac and do not have the local TTS model installed. Handle the
+setup for me rather than just listing commands. Read the repository's
+README.md and SKILL.md, then follow the first-time setup workflow.
+
+Check your local file/terminal access, my Mac's compatibility and available
+resources. Choose a skill location supported by the agent I am using, clone
+without overwriting anything, and verify the skill can actually be read.
+Explain the required installations and large model download in plain English
+and ask for my approval before proceeding with those changes. Install only
+the base and LFM3 requirements, and download the exact pinned model using
+this README. Try anonymous access first; do not assume I need an account.
+
+Finish with a NEW short example using real LFM3 narration, a cached-only
+render, and audio/video checks. Show me the resulting video so I can play it.
+Do not declare success based only on a say preview or a cache check.
+Never request passwords or tokens in chat, overwrite existing projects,
+buy API credits, silently switch voices, or publish anything. If you cannot
+run local commands or a permission/login requires me, tell me exactly what
+to do and wait, then resume from the completed step. Report real results
+and blockers honestly.
 ```
 
-The project selects Python 3.12. `say` is the macOS draft voice; other operating systems are not certified by this snapshot. Optional Apple Silicon engines have separate dependencies and large downloads. Review each model's terms before use. Runtime loading is offline; downloading weights requires your explicit choice. See [voices](references/voices.md).
+**You only need to:** provide the real URL, approve the explained changes, complete any system permission/login prompts yourself, and play the test video. If your chat app cannot access your Mac's files and terminal, use a local coding/desktop agent or have it guide you through the exact commands one step at a time. An agent's cloud terminal is not your Mac.
 
-## Local LFM3 narration (recommended final voice)
+## First-time setup workflow for the installing agent
 
-There is no TTS server URL, port or paid API to connect: the skill loads the model in its own Python process from your local Hugging Face cache. The tested target is Apple Silicon macOS with PyTorch/MPS. The current loader falls back to CPU when MPS is unavailable; other hardware/OS combinations are not certified. No voice-cloning recording is required for LFM3.
+1. **Check capabilities and hardware yourself.** Inspect the local OS/chip, free disk/memory and installed tools; do not ask a beginner to identify them manually when tools can. The tested target is **Apple Silicon macOS**. Intel/CPU fallback is not certified: explain a compatibility blocker and obtain agreement on an alternative rather than promising all Macs work or silently using `say`.
+2. **Choose the installation location before creating the Python environment.** Use the native skill locations below, or one user-owned checkout plus a supported registration link. Clone the supplied public GitHub URL, inspect README/SKILL and confirm the expected files. If a destination exists, inspect its origin/state; never overwrite, reset or clean it. Do not move an installed virtual environment just to register a skill.
+3. **Get a consolidated installation approval.** Explain native tools, Python packages, the model download (several GB; check current metadata/resources), model terms, and that loading the pinned checkpoint executes upstream Python code (`trust_remote_code=True`). Install only missing approved requirements. Homebrew/Xcode Command Line Tools may require the user to approve a dialog or type a password locally; never ask for that password in chat.
+4. **Install base + LFM3 dependencies, then the model.** `setup --lfm3` installs Python libraries **but not the model weights**. Check for the exact cached revision; a miss is expected on a new Mac, not a reason to abandon setup. After approval, use the pinned download command below. Do not download optional Fish/Whisper models or add paid routes. Use the user's existing authorized LLM; role/model suggestions are not extra account requirements.
+5. **Verify skill registration.** Follow the actual agent/version's supported discovery mechanism, reload if needed, and confirm it can read this checkout's `SKILL.md`. If discovery is unavailable, open the checkout and explicitly instruct the agent to read it; say that this is manual use, not proven automatic discovery.
+6. **Verify real local narration end to end.** Run `doctor --engine lfm3`, then the [safe first LFM3 video check](references/voices.md#first-lfm3-video-check). It creates a unique tiny lesson, generates LFM3 audio, proves current-text cache reuse, renders without synthesis, and checks the resulting streams/decoding. A successful install/cache probe, unit tests or system-voice preview alone is not setup completion.
+7. **Hand off something usable.** Report the checkout/skill path, invocation method, model cache location, engine/device, generated video path, checks actually performed and unresolved limitations. Ask the user to play the sample if you cannot listen. Then ask for their slides/notes/topic and desired scope; do not start a full lecture during installation.
 
-### Install the engine dependencies
+## Agent skill locations
 
-After the base setup above, run:
+Choose **one canonical checkout**; do not install duplicate copies with the same skill name. Confirm current official documentation for the actual product/surface/version before changing registration.
+
+| Agent | Installation/discovery approach |
+|---|---|
+| Claude Code on this Mac | `~/.claude/skills/manim-study-video/`; an existing checkout can use a supported symlink. Plain Claude chat/cloud sessions are not proof of local terminal access. [Official docs](https://code.claude.com/docs/en/skills). |
+| Codex local CLI/IDE | `~/.agents/skills/manim-study-video/`, or the project's `.agents/skills/`; supported symlinks can register an existing checkout. [Official docs](https://developers.openai.com/codex/skills). |
+| Antigravity | A workspace's `.agents/skills/manim-study-video/` is the portable project-scope choice. Confirm App/CLI/IDE surface and current personal/global locations rather than guessing; use a real checkout there unless symlink support is verified. Open that workspace and verify discovery. [Official docs](https://antigravity.google/docs/skills). |
+| Other local agents | Use their supported skill mechanism; otherwise explicitly read this checkout's `SKILL.md` and execute its workflow. Do not invent native registration commands. |
+| Hermes | Add the checkout's parent to the active profile's `skills.external_dirs` using its supported config CLI, preserving existing entries and obtaining approval. Avoid shadow copies. [Official docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills). |
+
+No setup step requires changing `CLAUDE.md`, `AGENTS.md`, existing project rules, unrelated skills or providers. Native skill-file support and local execution are separate capabilities; verify both.
+
+## Setup commands (agent/manual reference)
+
+The following is reference material for the installing agent, not homework for the new user. Set `SKILL` to the actual clone, not the placeholder below. If Homebrew is missing, guide its official installation and any system approvals first.
 
 ```sh
+export SKILL="/absolute/path/to/manim-study-video"
+export STUDY="$SKILL/bin/study"
+brew install uv ffmpeg cairo pango pkgconf
 "$STUDY" setup --lfm3
 ```
 
-This installs the optional Python dependencies, **not the model weights**. Ask your agent to check hardware, free disk/memory and model terms before a large download. The loader executes the checkpoint's custom Python code (`trust_remote_code=True`); only proceed if you trust the pinned upstream checkpoint.
+The project uses Python 3.12. **Hugging Face is the file host for the model download**, not a hosted speech API in this setup. The skill loads the downloaded model inside its own Python process; no TTS server, API key or private voice recording is normally required. Attempt the public checkpoint download anonymously first. If upstream access rules require authentication or acceptance, explain why and let the user complete the official flow locally—never collect credentials in chat. Local TTS does not make the chosen LLM/chat provider itself offline.
 
-### Reuse your existing local model
-
-The exact model/revision is defined by `LFM3_MODEL` and `LFM3_REVISION` in `studio/tts.py`. A different revision, model variant or a running TTS server is not interchangeable with this adapter. Check the cache without downloading or loading the model:
+Check whether this exact checkpoint is already cached, without loading or downloading it:
 
 ```sh
 "$STUDY" python -c 'from studio.tts import lfm3_model_path; p = lfm3_model_path(); print(p or "Required model revision is not cached"); raise SystemExit(0 if p else 1)'
 ```
 
-If this prints a snapshot path, skip the download. If your existing cache is elsewhere, set `HF_HOME` to its Hugging Face home directory (or `HF_HUB_CACHE` to its `hub` directory) **before** running any setup/check/download/narration command, and keep the same setting across them. Do not point `HF_HOME` at a single model snapshot. Otherwise keep the normal cache outside this repository. See the upstream [cache environment variables](https://huggingface.co/docs/huggingface_hub/en/package_reference/environment_variables).
+A new user will normally need the next step. If reusing a nondefault cache, set `HF_HOME` to its Hugging Face home (or `HF_HUB_CACHE` to its hub directory) consistently before checks/downloads/narration, not to an individual snapshot. Keep weights outside the repository. [Cache settings](https://huggingface.co/docs/huggingface_hub/en/package_reference/environment_variables).
 
 ### Download the pinned checkpoint
 
-Only if the cache check failed and you approve the download and model terms:
+After explicit download/terms approval, run this only when the required revision is missing:
 
 ```sh
 HF_HUB_OFFLINE=0 "$STUDY" python -c \
-'from huggingface_hub import snapshot_download; from studio.tts import LFM3_MODEL, LFM3_REVISION; print(snapshot_download(repo_id=LFM3_MODEL, revision=LFM3_REVISION))'
+'from huggingface_hub import snapshot_download; from studio.tts import LFM3_MODEL, LFM3_REVISION; print(snapshot_download(repo_id=LFM3_MODEL, revision=LFM3_REVISION, token=False))'
 ```
 
-This uses the runtime's pinned revision rather than downloading a floating `main`. The temporary online setting applies only to this download process. If access is denied or authentication/acceptance is required, complete the upstream access flow yourself; never paste a token into the agent conversation or commit one. Do not replace the pinned model/revision just to bypass an error.
-
-Then run `"$STUDY" doctor --engine lfm3` and repeat the cache check. Doctor/cache success establishes availability, not successful synthesis; verify a short real LFM3 clip before attempting a lecture. Runtime model loading remains offline and does not fetch missing weights.
-
-### Select the voice and generate
-
-In your lesson's `lesson.yaml`, replace its existing `voice:` setting with this mapping (do not add a duplicate key):
-
-```yaml
-voice:
-  engine: lfm3
-  preset: lfm3_uk_male_narrator
-  speed: 1.0
-  pause_ms: 350
-  lufs: -18
-```
-
-The distributed British-male preset uses locale/gender/seed, not a private reference clip. Once the script and say draft are approved:
+`token=False` makes this first attempt anonymous, without implicitly sending a saved token. If access is denied specifically because authentication/terms are required, have the user complete the official local flow, then retry with their locally authorized credentials (omit `token=False`); do not create an account or request credentials speculatively. The model ID/revision come from `studio/tts.py`; never replace the pin with a floating `main` to bypass an error. This command permits network access for this download process; normal runtime model loading remains offline. Do not claim the full download or synthesis succeeded from a metadata response alone. On access, disk or compatibility failure, retain progress and explain the exact next action.
 
 ```sh
-LESSON="/absolute/path/to/your/lesson"
-"$STUDY" narrate "$LESSON" --check       # read-only coverage; no synthesis
-"$STUDY" narrate "$LESSON"               # generates local audio; reuse unchanged blocks
-"$STUDY" build "$LESSON" -q h --cached-only --jobs 2
+"$STUDY" doctor --engine lfm3
 ```
 
-Run only one real TTS process at a time; for several sections, pass them together to `narrate` to share one model load. Listen to the output and review timing; a say preview or successful cache lookup is not proof that LFM3 works. Keep weights, generated audio and optional personal recordings out of Git. Further pronunciation, cache and proofreading details: [voices](references/voices.md).
+Now follow the [first LFM3 video check](references/voices.md#first-lfm3-video-check), not a full lecture. `say` is a fast draft option only; switching final narration away from LFM3 needs the user's agreement. Further voice settings, pronunciation and repairs: [voices](references/voices.md).
 
-### Copy-paste prompt for your agent
+## After setup
 
-> Set up this checkout's local LFM3 narration using this README and SKILL.md. First inspect the platform, available disk/memory, installed dependencies, and the model ID/revision in studio/tts.py. Explain the model terms and that loading executes pinned upstream Python code; ask my approval before installing packages or downloading weights. Reuse my existing compatible Hugging Face cache if present; otherwise use the exact pinned download command above, outside the repository. Do not connect a paid API, change the pinned model, start a TTS server or silently fall back to say. After setup, run doctor --engine lfm3 and the offline cache check. Copy examples/hello into a NEW isolated lesson folder without overwriting anything, replace its voice setting with the LFM3 preset above, and synthesize only that short example to verify actual LFM3 output. Probe the real audio and report its path, duration, device and checks actually performed; ask me to listen if you cannot. Do not regenerate existing lectures, download optional Fish/Whisper models, publish anything or add weights/audio/credentials to Git. Stop and report any compatibility or access blocker rather than inventing success.
+Ask the agent to use `manim-study-video` with your permitted PDF/PPTX, notes or topic, target duration and requested stage. Automatic delegation is optional; an agent without subagents can do the same roles sequentially. No specific Claude/Codex model ID or extra subscription is required just to install or use the skill.
 
-## Workspace
+Projects default to `~/study-videos/lessons/`, with inputs, editable sources, audio cache and accepted revisions together. `STUDY_HOME` changes the workspace; explicit paths, `--lessons-dir` and `STUDY_LESSONS_DIR` override defaults. Never move or overwrite existing lessons without permission. Keep projects/caches outside the code checkout. Final narration is generated with `narrate`, then rendered with `build ... --cached-only`; captions, transcripts, chapters and source maps accompany the video.
 
-New lessons default to `~/study-videos/lessons/`, independent of the current directory. `STUDY_HOME` changes the workspace root; explicit lesson paths, `--lessons-dir` and `STUDY_LESSONS_DIR` override it. Existing projects are never moved. Keep sources, cache and accepted revisions together; workspace `library/` and `VIDEO-LIBRARY.md` can index finished videos.
+## Updates and checks
 
-## Small example (no agent or model download)
-
-```sh
-mkdir -p "$HOME/study-videos/lessons"
-# Copy once into a new folder; do not overwrite an existing lesson.
-cp -R "$SKILL/examples/hello" "$HOME/study-videos/lessons/hello"
-"$STUDY" build "$HOME/study-videos/lessons/hello" --engine say -q l
-"$STUDY" review "$HOME/study-videos/lessons/hello" --lint --layout --sheet
-```
-
-This self-authored example uses shapes/text and macOS Samantha. Drafts go into `build/draft/`, not over accepted finals. For actual slides/notes, ask an agent to read [SKILL.md](SKILL.md), supply permitted inputs and specify the requested stage.
-
-## Agent installation and checks
-
-Keep one checkout as the source of truth; `$SKILL` must be its absolute path. The CLI locates its own code. Choose one discovery method; do not install duplicate copies with the same skill name.
-
-**Any file-capable agent:** open the checkout as your working folder and ask: “Read SKILL.md in this checkout, follow its linked references only when needed, and help me complete the README setup. Use my existing authorized model connection; do not change providers or buy credits.” This works without automatic skill discovery.
-
-**Codex / Claude Code:** both support symlinked skill directories. Choose the relevant user-level skills directory below, then register the existing checkout without overwriting anything:
-
-```sh
-SKILLS_DIR="$HOME/.agents/skills"       # Codex
-# SKILLS_DIR="$HOME/.claude/skills"     # Claude Code: use this instead
-DEST="$SKILLS_DIR/make-study-video"
-if [ -e "$DEST" ] || [ -L "$DEST" ]; then
-  printf 'Already exists: %s; inspect it instead of overwriting.\n' "$DEST"
-else
-  mkdir -p "$SKILLS_DIR"
-  ln -s "$SKILL" "$DEST"
-fi
-```
-
-Restart/reload the agent if necessary and explicitly request `make-study-video`; verify it reads this checkout's SKILL.md. Upstream discovery rules: [Codex](https://developers.openai.com/codex/skills), [Claude Code](https://code.claude.com/docs/en/skills).
-
-**Hermes:** ask its agent to add the parent of this checkout to `skills.external_dirs` for the active profile using `hermes config set`, preserving existing entries and asking approval before changing configuration. For example, a checkout at `~/agent-skills/make-study-video` uses `~/agent-skills` as its discovery root. Do not overwrite config.yaml or create a shadow copy; confirm the loaded skill path with `skill_view`. [Hermes shared-skill discovery](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills).
-
-Model/provider authentication is separate from TTS setup. Use your agent's own sign-in flow; do not put credentials in this repo or assume every model named in the role table is available to your account.
-
-No particular username, clone path or Hermes profile is required. Share tracked Git files or a Git-generated archive, not a ZIP of your working directory: ignored local audio and environments may still be present.
-
-```sh
-"$STUDY" python -m unittest discover -s "$SKILL/tests" -v
-```
-
-Correctness tests do not require rendering a lecture. Do not overwrite accepted projects to validate pipeline changes.
-
-## Updates and releases
-
-For a Git clone, inspect `git -C "$SKILL" status --short` first. If it has local edits, resolve them deliberately before updating; never use reset/clean to erase them. With a clean checkout and a configured remote:
+For a Git clone, inspect `git -C "$SKILL" status --short` first; resolve local edits deliberately without reset/clean. With a clean checkout and configured remote:
 
 ```sh
 git -C "$SKILL" pull --ff-only
-"$STUDY" setup --lfm3              # or setup without extras if you only use say
-"$STUDY" doctor --engine lfm3      # or --engine say
+"$STUDY" setup --lfm3
+"$STUDY" doctor --engine lfm3
 "$STUDY" python -m unittest discover -s "$SKILL/tests" -v
-git -C "$SKILL" rev-parse HEAD     # record the generation-code revision
 ```
 
-A ZIP download has no Git remote: get a new source archive and install it into a new directory, then intentionally update your skill registration. Do not overlay or delete an old working checkout. Keep projects/caches outside the code checkout. Updates do not authorize re-narrating or re-rendering existing projects; if the pinned model changes, review terms and approve the new download explicitly. For reproducibility, use a known commit/tag with its committed `uv.lock`; do not upgrade dependencies independently to fix an unexplained failure.
+A ZIP has no Git remote: install a new source archive into a new directory and intentionally update registration rather than overlaying an existing checkout. New model pins need fresh terms/download approval. Updates do not authorize regenerating existing lectures. Use a known commit/tag with its committed `uv.lock` for reproducibility.
 
-## Automated checks
-
-The GitHub Actions workflow runs locked base installation, public unit tests, and a tiny macOS say render with lint and full audio/video decode. It has read-only repository permissions, does not install optional TTS models and does not use private benchmark data. It runs on pushes, pull requests and manual dispatch after you publish the repository; merely adding the workflow does not mean a hosted run has passed.
-
-Run the same integration check locally in a NEW isolated output directory (the command refuses an existing directory):
+Public CI runs locked base installation, unit tests and a tiny macOS `say` render with strict full decoding; it does not download optional models or use private developer datasets. To run its integration check locally, use a NEW output directory:
 
 ```sh
 "$STUDY" python "$SKILL/tests/smoke.py" --work-dir "$HOME/study-videos/checks/new-say-smoke"
 ```
 
-`doctor --engine lfm3` makes missing LFM3 dependencies/cache a failure rather than an optional warning; repeat `--engine` to require several engines. Doctor does not load/synthesize a model, certify audio quality or guarantee hardware capacity. The smoke check uses say; separately validate one short real LFM3 example before a long project. This snapshot was exercised in fresh base-only and LFM3 Python environments on an existing Mac, reusing installed native tools and the pinned model cache; that is not a new-machine or first-download certification. Hosted Actions execution still requires publication. Support target remains macOS; other OS/GPU combinations are not certified.
+That check validates the base renderer, not LFM3 or listening quality. Fresh base/LFM3 Python environments have been exercised on an existing Mac with installed native tools/cached weights; this is not a new-machine or first-download certification. Hosted Actions execution requires publication and a real run. Other OS/GPU configurations remain uncertified.
 
-## License status
+## Contents and license
 
-This project's original code is distributed under the [MIT License](LICENSE), attributed to **make-study-video contributors**. Dependency, upstream modeling-code/checkpoint and asset licenses remain separate; see [third-party notes](THIRD_PARTY.md). MIT does not relicense third-party materials or certify their compatibility for your use/distribution. Setup does not publish or configure a remote repository.
+The reusable skill includes source/configuration, dependency lockfile, voice presets, source-only examples and maintained correctness tests—not personal lectures, reference recordings, credentials, generated videos, developer telemetry or historical datasets. No Hermes plugin/developer addon is required. Share tracked Git files or a Git-generated archive, not a ZIP of a working checkout containing ignored local files.
+
+Original code is under the [MIT License](LICENSE), attributed to **manim-study-video contributors**. Dependency, upstream modeling-code/checkpoint and asset terms are separate; see [third-party notes](THIRD_PARTY.md). MIT does not relicense third-party materials or certify compatibility. Installation never publishes or configures a remote for the user's generated videos.

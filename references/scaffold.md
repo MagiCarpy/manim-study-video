@@ -42,5 +42,5 @@ Force replaces only generated files/symlinks; it refuses real existing source di
 symlinked output files. Use a fresh output path when re-ingesting a source deck.
 
 ```sh
-"$STUDY" build lessons/forwarding-part2/sections/05-longest-prefix --engine say --jobs 2 --lock ~/.cache/study-locks/forwarding-part2/cpu1 --lock ~/.cache/study-locks/forwarding-part2/cpu2 --owner 05-longest-prefix
+"$STUDY" review lessons/forwarding-part2/sections/05-longest-prefix --lint --layout --sheet --lock ~/.cache/study-locks/forwarding-part2/cpu1 --lock ~/.cache/study-locks/forwarding-part2/cpu2 --owner 05-longest-prefix
 ```

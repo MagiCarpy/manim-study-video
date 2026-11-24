@@ -29,6 +29,14 @@ from studio.paths import SKILL_DIR, lesson_dir, rel
 VERSION = 1
 SAFE = (-6.5, -3.5, 6.5, 3.5)
 SOURCE_REGION = (0.0, -4.0, 7.12, -3.0)
+SOURCE_GAP = 0.12  # min clear distance between content text and a source tag (scene units)
+
+
+def _gap(a, b):
+    """Euclidean distance between two AABBs (0 when they touch or overlap)."""
+    dx = max(b[0] - a[2], a[0] - b[2], 0.0)
+    dy = max(b[1] - a[3], a[1] - b[3], 0.0)
+    return (dx * dx + dy * dy) ** 0.5
 LATEX = {"MathTex", "Tex", "Matrix", "DecimalNumber", "Integer", "MathTable", "IntegerTable",
          "DecimalTable", "BulletedList", "Title", "BraceLabel", "SingleStringMathTex", "Variable"}
 SHEET_COLS = 3  # sheet grid: at most this many frames across
@@ -57,6 +65,13 @@ def layout_issues(boxes):
         if not a["source"] and intersection(b, SOURCE_REGION) > .02:
             found.append(issue("source_region", "Text intrudes into reserved bottom-right source region", texts=[a["text"]], boxes=[b]))
         for other in boxes[:i]:
+            if a["source"] != other["source"] and _gap(b, other["bbox"]) < SOURCE_GAP and intersection(b, other["bbox"]) <= .02:
+                text_box = a if not a["source"] else other
+                tag_box = other if text_box is a else a
+                found.append({**issue("source_tag_gap", f"Text sits within {SOURCE_GAP} units of the source tag; "
+                                      "leave a clear gap so the citation reads as separate",
+                                      texts=[tag_box["text"], text_box["text"]], boxes=[tag_box["bbox"], text_box["bbox"]]),
+                              "severity": "warning"})
             area = intersection(b, other["bbox"])
             small = min((b[2]-b[0])*(b[3]-b[1]), (other["bbox"][2]-other["bbox"][0])*(other["bbox"][3]-other["bbox"][1]))
             if area > .02 and area / max(small, 1e-9) > .12:
@@ -87,7 +102,10 @@ class LayoutRecorder:
                 if new is not None:
                     for a, b in zip(old.get_family(), new.get_family()):
                         if isinstance(a, (Text, MarkupText)) and isinstance(b, (Text, MarkupText)):
+                            # `was` lets a later in-place change (become/cross_fade) invalidate this;
+                            # FadeIn is itself a Transform whose target is the same text.
                             self.text_overrides[a] = dict(text=getattr(b, 'original_text', getattr(b, 'text', '')),
+                                                          was=getattr(a, 'original_text', None),
                                                           font_size=float(b.font_size), height=float(a.height),
                                                           source=bool(getattr(b, '_studio_source_tag', False)))
             for child in getattr(anim, 'animations', ()):
@@ -111,6 +129,8 @@ class LayoutRecorder:
                     return
                 lo, hi = points.min(axis=0), points.max(axis=0)
                 override = self.text_overrides.get(mob, {})
+                if override and override.get('was') != getattr(mob, 'original_text', None):
+                    override = {}  # the Text was replaced in place since; trust its own metadata
                 text = override.get('text', getattr(mob, 'original_text', getattr(mob, 'text', '')))
                 b = [float(lo[0]), float(lo[1]), float(hi[0]), float(hi[1])]
                 source = override.get('source', False) or bool(getattr(mob, '_studio_source_tag', False)) or (
@@ -133,13 +153,45 @@ class LayoutRecorder:
             f.write(json.dumps(row, ensure_ascii=False) + '\n')
 
 
-def static_lint(folder, spec):
+# Motion that should carry the idea itself; anything else is decoration that costs review passes.
+DECORATIVE_MOTION = {'Rotate', 'Rotating', 'MoveAlongPath', 'packet_flight', 'packet_route', 'add_updater',
+                     'always_redraw', 'Wiggle', 'Circumscribe', 'ApplyWave', 'Homotopy', 'SpinInFromNothing',
+                     'Swap', 'CyclicReplace', 'fly', 'route'}
+# Section-local helper name -> library replacement (import it instead of rewriting it).
+LIBRARY_HELPERS = {
+    'T': 'cslib.label', 'P': 'cslib.P', 'panel': 'cslib.panel', 'boxed': 'cslib.boxed', 'card': 'cslib.card',
+    'host': 'cslib.host', 'pill': 'cslib.pill', 'mark': 'cslib.mark', 'left_text': 'cslib.text_at',
+    'text_at': 'cslib.text_at', 'rich': 'cslib.rich_text', 'rich_text': 'cslib.rich_text',
+    'small_arrow': 'cslib.arrow', 'dbl_arrow': 'cslib.arrow(both=True)', 'arrow': 'cslib.arrow',
+    'bracket': 'cslib.bracket', 'later': 'cslib.later', 'appear': 'cslib.appear',
+    'Retext': 'cslib.cross_fade', 'swap': 'cslib.cross_fade', 'cross_fade': 'cslib.cross_fade',
+    'until': 'cslib.beat', 'rest': 'cslib.beat', 'beat': 'cslib.beat',
+    'wait_to': 'self.wait_for(t, mark)', 'wait_rest': 'self.wait_for(t)',
+    'TL': 'cslib.Timeline', 'Timeline': 'cslib.Timeline', 'Msg': 'Timeline.message', 'legend': 'Timeline.legend',
+    'fly': 'cslib.packet_flight (only if the travel is the concept)', 'route': 'cslib.packet_route',
+    'unit': 'numpy (v / np.linalg.norm(v))',
+}
+
+
+def _justified(lines, lineno):
+    """True when this line, or a comment-only line directly above it, carries `# concept:`."""
+    here = lines[lineno - 1] if 0 < lineno <= len(lines) else ''
+    above = lines[lineno - 2].strip() if lineno >= 2 else ''
+    return '# concept:' in here or (above.startswith('#') and '# concept:' in above)
+
+
+def static_lint(folder, spec, scenes=None):
     found = []
     path = folder / 'scenes.py'
     try:
-        tree = ast.parse(path.read_text())
+        source_lines = path.read_text().splitlines()
+        tree = ast.parse('\n'.join(source_lines))
     except (OSError, SyntaxError) as e:
         return [issue('scenes_parse', str(e), file='scenes.py')]
+    selected = None if scenes is None else set(scenes)
+    if selected is not None:
+        excluded = {s['name'] for s in spec['scenes']} - selected
+        tree.body = [n for n in tree.body if not isinstance(n, ast.ClassDef) or n.name not in excluded]
     aliases = {a.asname or a.name: a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) for a in n.names}
     def name(n):
         raw = n.id if isinstance(n, ast.Name) else n.attr if isinstance(n, ast.Attribute) else ''
@@ -154,7 +206,14 @@ def static_lint(folder, spec):
     known = pronounce_keys() | set((spec.get('pronounce') or {}) if isinstance(spec.get('pronounce'), dict) else ())
     unknown = {}  # all-caps word with no spoken form -> narration line numbers
     classes = {n.name: n for n in tree.body if isinstance(n, ast.ClassDef)}
+    for n in tree.body:
+        if isinstance(n, (ast.FunctionDef, ast.ClassDef)) and n.name in LIBRARY_HELPERS:
+            found.append({**issue('redefined_helper', f'{n.name} re-implements {LIBRARY_HELPERS[n.name]}; import it '
+                                  'instead (each local copy is written, debugged and re-read every turn)',
+                                  name=n.name, file='scenes.py', line=n.lineno), 'severity': 'warning'})
     for scene in spec['scenes']:
+        if selected is not None and scene['name'] not in selected:
+            continue
         cls = classes.get(scene['name'])
         if cls is None:
             found.append(issue('missing_scene', 'lesson.yaml scene missing from scenes.py', scene=scene['name']))
@@ -183,6 +242,11 @@ def static_lint(folder, spec):
             val = literal(kw.value)
             if (kw.arg == 'font_size' or (kw.arg == 'size' and func in {'label', 'source_tag'})) and isinstance(val, (int, float)) and val < 20:
                 found.append(issue('small_font', f'{kw.arg}={val} below 20', **ctx))
+        if func in DECORATIVE_MOTION and not _justified(source_lines, n.lineno):
+            found.append({**issue('decorative_motion',
+                                  f'{func}: motion that is not the concept costs review passes and attention; '
+                                  'use a static reveal/highlight, or add a `# concept: <why the motion teaches>` '
+                                  'comment on this line or the line above', call=func, **ctx), 'severity': 'warning'})
         if func == 'voiceover':
             text = next((literal(k.value) for k in n.keywords if k.arg == 'text'), None)
             if text is None and n.args:
@@ -205,7 +269,8 @@ def static_lint(folder, spec):
                               f"`pronounce: {{{word}: ...}}` to lesson.yaml, or tts.PRONOUNCE if it is common",
                               file='scenes.py', line=lines[0], count=len(lines)), 'severity': 'warning'})
     side = folder/'build' if (folder/'build'/'captions.srt').exists() else folder/'build'/'draft'
-    for file in [side/'captions.srt', side/'transcript.md']:
+    sidecars = [] if scenes is not None else [side/'captions.srt', side/'transcript.md']
+    for file in sidecars:
         if not file.exists():
             found.append({**issue('missing_sidecar', 'Caption/transcript lint unavailable until build', file=str(file.relative_to(folder))), 'severity': 'warning'})
             continue
@@ -215,7 +280,7 @@ def static_lint(folder, spec):
             clean = re.sub(r'\[[^\]]+\]\([^)]*\)', '', clean)
             if re.search(r'\[\[.*?\]\]|\[[A-Za-z][^\]\n]*\]|<bookmark\b', clean):
                 found.append(issue('caption_tag', 'Narration tag leaked into captions/transcript', file=str(file.relative_to(folder)), line=i, text=line))
-    return found + script_lint(folder)
+    return found + script_lint(folder, scenes)
 
 
 # --- pronunciation ------------------------------------------------------------------------
@@ -283,7 +348,7 @@ def parse_script(text):
     return scenes
 
 
-def script_lint(folder):
+def script_lint(folder, scenes=None):
     """Warn where script.md and the literal voiceover texts in scenes.py differ, scene by scene and in order."""
     script = folder / 'script.md'
     if not script.is_file():
@@ -310,6 +375,8 @@ def script_lint(folder):
     scripted = parse_script(script.read_text(encoding='utf-8'))
     found = []
     for scene in dict.fromkeys([*narration, *scripted]):
+        if scenes is not None and scene not in scenes:
+            continue
         want_all = narration.get(scene, [])
         if want_all is None:
             continue  # dynamic narration: static_lint's dynamic_narration already flags it
@@ -343,19 +410,16 @@ def review_dir(folder):
 def fingerprint(folder):
     """Hash of everything that can change a draft layout: scenes, lesson spec, lesson source text and studio code."""
     h = hashlib.sha256()
-    files = [folder / 'scenes.py', folder / 'lesson.yaml']
-    files += sorted(p for p in (folder / 'source').rglob('*.md') if p.is_file())
-    files += sorted((SKILL_DIR / 'studio').rglob('*.py'))
-    for p in files:
+    files = [folder / 'lesson.yaml', *folder.glob('*.py')]
+    for dirname in ('source', 'assets'):
+        files.extend(p for p in (folder / dirname).rglob('*') if p.is_file() and '__pycache__' not in p.parts)
+    files += list((SKILL_DIR / 'studio').rglob('*.py'))
+    for p in sorted(files):
         if p.is_file():
             h.update(str(p).encode())
-            h.update(p.read_bytes())
+            with p.open('rb') as source:
+                h.update(hashlib.file_digest(source, 'sha256').digest())
     return h.hexdigest()
-
-
-def render_stamps(folder, names):
-    from studio.build import scene_paths
-    return [p.stat().st_mtime_ns if p.exists() else None for p in (scene_paths(folder, n, 'l')[0] for n in names)]
 
 
 def layout_files(folder, names):
@@ -366,51 +430,77 @@ def read_layout_rows(folder, names):
     return [json.loads(line) for p in layout_files(folder, names) for line in p.read_text().splitlines() if line.strip()]
 
 
-def record_layout(folder, spec, key, engine):
-    """Called by `study build --review` after a full 480p draft: store the snapshots with the
-    fingerprint taken before the build and the render stamps after it. Returns False if any scene left no snapshot."""
-    names = [s['name'] for s in spec['scenes']]
-    if not all(p.exists() and p.stat().st_size for p in layout_files(folder, names)):
-        return False
-    cache = review_dir(folder) / 'layout-cache.json'
-    cache.write_text(json.dumps(dict(version=VERSION, fingerprint=key, engine=engine,
-                                     renders=render_stamps(folder, names))))
-    return True
+def layout_manifest(folder, name):
+    return review_dir(folder) / f'layout.{name}.cache.json'
 
 
-def layout_reusable(folder, spec):
-    """True when the recorded snapshots still match the lesson, source, studio code and 480p renders."""
-    cache = review_dir(folder) / 'layout-cache.json'
-    if not cache.exists():
-        return False
+def layout_artifacts(folder, name):
+    from studio.build import scene_paths
+    files = [scene_paths(folder, name, 'l')[0], *layout_files(folder, [name])]
     try:
-        saved = json.loads(cache.read_text())
-    except ValueError:
+        stats = [p.stat() for p in files]
+    except FileNotFoundError:
+        return None
+    return [[st.st_mtime_ns, st.st_size] for st in stats] if all(st.st_size for st in stats) else None
+
+
+def record_layout(folder, spec, key, engine, scenes=None):
+    """Record the input revision and artifacts for each successfully rendered scene."""
+    names = scenes or [s['name'] for s in spec['scenes']]
+    if key != fingerprint(folder):
         return False
-    names = [s['name'] for s in spec['scenes']]
-    return (saved.get('version') == VERSION and saved.get('engine') == 'say'
-            and saved.get('fingerprint') == fingerprint(folder)
-            and saved.get('renders') == render_stamps(folder, names)
-            and all(p.exists() and p.stat().st_size for p in layout_files(folder, names)))
+    complete = True
+    for name in names:
+        stamps = layout_artifacts(folder, name)
+        if stamps is None:
+            complete = False
+            continue
+        layout_manifest(folder, name).write_text(json.dumps(dict(version=VERSION, fingerprint=key,
+                                                                engine=engine, artifacts=stamps)))
+    return complete
 
 
-def layout_review(folder, spec, out, locks, owner):
-    names = [s['name'] for s in spec['scenes']]
-    if layout_reusable(folder, spec):
-        timing = dict(reused=True, build_s=0.0)
-    else:
+def stale_layouts(folder, names):
+    key = fingerprint(folder)
+    stale = []
+    for name in names:
+        try:
+            saved = json.loads(layout_manifest(folder, name).read_text())
+        except (OSError, ValueError):
+            saved = {}
+        stamps = layout_artifacts(folder, name)
+        if (not isinstance(saved, dict) or saved.get('version') != VERSION or saved.get('engine') != 'say'
+                or saved.get('fingerprint') != key or stamps is None or saved.get('artifacts') != stamps):
+            stale.append(name)
+    return stale
+
+
+def layout_reusable(folder, spec, scenes=None):
+    return not stale_layouts(folder, scenes or [s['name'] for s in spec['scenes']])
+
+
+def layout_review(folder, spec, out, locks, owner, scenes=None):
+    names = scenes or [s['name'] for s in spec['scenes']]
+    stale = stale_layouts(folder, names)
+    timing = dict(reused=not stale, build_s=0.0, scenes=list(names), rebuilt_scenes=stale)
+    if stale:
         cmd = [sys.executable, '-P', '-m', 'studio.build', str(folder), '--engine', 'say', '--jobs', '2',
                '--review', '--owner', owner]
+        if scenes or stale != names:
+            for name in stale:
+                cmd += ['--scene', name]
         for lock in locks:
             cmd += ['--lock', lock]
         start = time.perf_counter()
         result = subprocess.run(cmd, capture_output=True, text=True)
-        timing = dict(reused=False, build_s=time.perf_counter() - start)
+        timing['build_s'] = time.perf_counter() - start
         if result.returncode:
             tail = ' | '.join((result.stdout + result.stderr).strip().splitlines()[-3:])
             return [issue('layout_build', f'480p say build failed (exit {result.returncode}): {tail}')], [], timing
-        if not layout_reusable(folder, spec):
-            return [issue('layout_missing', 'No layout snapshots for one or more scenes; each scene must inherit StudyScene and play/wait')], [], timing
+        missing = stale_layouts(folder, names)
+        if missing:
+            return [issue('layout_missing', f'No current layout snapshots for {", ".join(missing)}; '
+                          'each scene must inherit StudyScene and play/wait')], [], timing
     rows = read_layout_rows(folder, names)
     found, dedup = [], set()
     for row in rows:
@@ -515,6 +605,8 @@ def main(argv=None):
     ap.add_argument('--lock', action='append', help='repeatable CPU build slot (layout only)')
     ap.add_argument('--owner', default='review')
     ap.add_argument('--verbose', '-v', action='store_true', help='print every finding, not just the top ones')
+    ap.add_argument('--scene', action='append', default=[], metavar='NAME',
+                    help='check only this scene (repeatable); later scenes may not exist yet')
     args = ap.parse_args(argv)
     if not any([args.lint, args.layout, args.sheet]):
         args.lint = args.sheet = True
@@ -531,12 +623,20 @@ def main(argv=None):
         if not spec.get('scenes'):
             raise ValueError('lesson.yaml has no scenes')
         names = [s['name'] for s in spec['scenes']]
+        if args.scene:
+            unknown = [s for s in args.scene if s not in names]
+            if unknown:
+                raise ValueError(f"--scene {', '.join(unknown)} not in lesson.yaml ({', '.join(names)})")
+        full_spec = spec
+        if args.scene:
+            spec = dict(spec, scenes=[s for s in spec['scenes'] if s['name'] in args.scene])
+            names = [s['name'] for s in spec['scenes']]
         if args.layout:
             locks = args.lock or [str(Path.home()/'.cache/study-locks/skill-dev'/f'cpu{i}') for i in [1, 2]]
-            found, rows, timing = layout_review(folder, spec, out, locks, args.owner)
+            found, rows, timing = layout_review(folder, spec, out, locks, args.owner, scenes=args.scene or None)
             issues += found
         if args.lint:
-            issues += static_lint(folder, spec)
+            issues += static_lint(folder, full_spec, args.scene or None)
         if args.sheet:
             # Draft timing is only used when it matches the current source and the 480p renders.
             if not rows and layout_reusable(folder, spec):

@@ -19,9 +19,15 @@ update it when the source changes within a scene and restore it after clearing t
 
 Extend the existing `notes.md` coverage table into a source map: scene/visual beat → original
 file and exact locator → displayed label → provenance (source, added, or correction).
-After the final edit, add actual section-local video time ranges, not planned durations.
-Copy this map as `sources.md` beside the delivered MP4, with full filenames, external links
-where used, and any numbering correspondence. This is an agent-authored sidecar: the renderer
-does not generate it automatically. Keep citations visual; do not make narration read them
+Keep the scaffolded columns (`Slide | Scene [blocks] | Locator | Displayed label | Provenance |
+Actual times`); name blocks as `Ports [01]–[03], [05]` or `Ports (all)`. Put the input file,
+author/course credit and numbering in `credits:` (collection.yaml, or lesson.yaml for a single
+lesson); the scaffold leaves a TODO there on purpose. After the final build, run
+`$STUDY sources <section>` (or `<collection>` for every section): it aligns script blocks to the
+final captions, writes `build/sources.md` and `build/sources.json` with measured section-local
+times, and appends the notes' reference/correction sections and `External:` lines. It fails,
+writing nothing, if any row names a block that is not in the script or if `credits:` has TODO.
+After assembly, `$STUDY sources <collection> --combined` shifts every row by the combined video's
+measured chapter starts. Copy `sources.md` beside the delivered MP4. Keep citations visual; do not make narration read them
 or insert them into speech captions. A bare-topic lesson can use `Added explanation` and
 cite any references actually consulted; never fabricate input citations.

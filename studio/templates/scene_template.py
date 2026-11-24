@@ -40,6 +40,7 @@ class CoreIdea(StudyScene):
         a, b = Node("Host A").move_to(LEFT * 4), Node("Host B", kind="server").move_to(RIGHT * 4)
         with self.voiceover(text="Now let's animate the mechanism itself.") as t:
             self.play(FadeIn(a), FadeIn(b))
+            # concept: the packet crossing from A to B is the mechanism being explained
             self.play(packet_flight(Packet("DATA"), a, b, run_time=2))
         self.clear_all()
 

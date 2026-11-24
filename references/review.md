@@ -3,11 +3,11 @@
 Run the draft loop from the project containing `lessons/` (or pass a lesson path):
 
 ```sh
-STUDY=$SKILL/bin/study
-$STUDY build <lesson> --engine say --jobs 2 \
+STUDY="$SKILL/bin/study"
+"$STUDY" review <lesson> --lint --layout --sheet \
   --lock ~/.cache/study-locks/skill-dev/cpu1 \
   --lock ~/.cache/study-locks/skill-dev/cpu2 --owner review
-$STUDY review <lesson> --lint --layout --sheet
+# Repeat --scene Name for targeted changes. Do not pre-build the draft.
 # Read build/review/report.md and one contact sheet per scene; fix and repeat.
 ```
 
@@ -23,20 +23,21 @@ No flags defaults to `--lint --sheet`. `--lessons-dir` follows other study comma
   Missing sidecars and dynamic narration are warnings: build or inspect manually.
 - `--layout` always uses 480p15, `say`, two jobs, owner `review`, and the two CPU
   slot locks above (override with repeatable `--lock` and `--owner`). It never loads
-  a speech model. It rebuilds on changed lesson assets, studio source, or render
-  timestamps; otherwise it reuses a complete successful recording. Layout is a
-  draft check even with `-q h`. It writes per-scene `layout.<Scene>.jsonl`.
+  a speech model. A scene's layout is reused only while its artifact stamps and
+  input fingerprint match. Inputs include `lesson.yaml`, top-level lesson Python,
+  `source/`, `assets/` and studio Python. Keep render dependencies in those paths.
+  Targeted lint excludes other configured scenes and generated section sidecars;
+  run full lint before acceptance. Layout stays a draft check even with `-q h`.
 - `--sheet` reads existing renders and writes `<Scene>.png`: eight evenly spaced
   frames plus frames 0.1 seconds after known source-change endpoints from matching draft layout recordings.
   `-q l` (default) uses 480p15; `-q h` uses 1080p30. High-quality sheets use eight
   frames only, because another voice/quality render may have different timing.
   Missing or unreadable renders are errors. Images are labeled with scene/time.
 
-For a normal build with recording enabled, use an absolute destination:
+For an explicit draft build when you also need layout evidence, keep recording enabled so a subsequent review can reuse it:
 
 ```sh
-STUDIO_LAYOUT="$PWD/lessons/<lesson>/build/review/layout.jsonl" \
-  $STUDY build <lesson> --engine say --jobs 2 \
+"$STUDY" build <lesson> --engine say --review --jobs 2 \
   --lock ~/.cache/study-locks/skill-dev/cpu1 \
   --lock ~/.cache/study-locks/skill-dev/cpu2 --owner review
 ```
@@ -48,6 +49,21 @@ clock and active narration. It reports parts outside the centered 13 × 7 safe a
 and 12% of the smaller box, and non-source text in the reserved bottom-right region
 (x=0…7.12, y=−4…−3). Geometry stays unchanged. Per-scene recorder time excludes JSON
 serialization/I/O; avoid redundant samples while retaining useful review coverage.
+
+## Stream acceptance and smoke checks
+
+Probe metadata, then decode the entire output; metadata alone does not establish stream integrity:
+
+```sh
+ffprobe -v error -show_streams -show_format -of json "$VIDEO"
+ffmpeg -v error -xerror -i "$VIDEO" -f null -
+```
+
+Require both commands to exit successfully before reporting acceptance. Keep `-xerror` before `-i`: logging at error level does not make every decode error fatal. Preserve a regression test for this command policy so later simplification cannot silently weaken CI. Require expected audio/video streams, positive duration within the fixture budget and the requested dimensions; successful decoding does not prove narration or visual quality.
+
+Run deterministic smoke checks from a fresh locked environment using a new source-only fixture directory. Refuse existing output paths and retain failure logs; never use an accepted lecture as a test target. Test base-only installation separately from optional-engine installation, because installed extras can hide undeclared dependencies. Report public and private test counts separately. A local equivalent is not a hosted CI run.
+
+For source-only example lint, distinguish expected missing generated sidecars from source/script errors. Scope any exception to that fixture and warning; never weaken production lint or omit final rendered-sidecar checks.
 
 ## Limits and manual review
 

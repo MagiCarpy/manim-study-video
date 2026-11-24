@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# study: entry point for the make-study-video skill. Works from any directory;
+# study: entry point for the manim-study-video skill. Works from any directory;
 # lessons live in ~/study-videos/lessons/<slug>/ (or --lessons-dir / $STUDY_LESSONS_DIR).
 #
 #   study setup [--fish] [--lfm3] [--proofread]  create/refresh the skill venv (--fish: + mlx-audio for Fish TTS,
@@ -20,6 +20,10 @@
 #   study status <collection|lesson> [--json] [--verify]   read-only resume dashboard
 #   study api [cslib|base|style|tts|all] [--grep WORD]     generated helper index (signatures, constants)
 #   study digest <lesson|collection|source> [--slides R] [--check]   per-deck slide digest for planners
+#   study sources <section...|collection> [--combined] [--video F]   timed sources.md from source map + final captions
+#   study animate <section> [--group A,B] [--dry-run]    per-scene headless animator orders
+#   study animate <collection> [--follow]                one lane of frozen sections
+#   study checkpoint <section> --freeze | --draft ... | --scene N ...  atomic stage/progress updates
 #   study python ...                      run python inside the skill venv
 set -euo pipefail
 
@@ -62,7 +66,10 @@ case "$cmd" in
   status) run -m studio.status "$@" ;;
   api) run -m studio.api "$@" ;;
   digest) run -m studio.digest "$@" ;;
+  sources) run -m studio.sources "$@" ;;
+  animate) run -m studio.workorders "$@" ;;
+  checkpoint) run -m studio.checkpoint "$@" ;;
   python) run "$@" ;;
-  help|-h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//' ;;
+  help|-h|--help) sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) echo "study: unknown command '$cmd' (try: study help)" >&2; exit 2 ;;
 esac

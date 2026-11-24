@@ -19,7 +19,7 @@ import yaml
 from .paths import lesson_dir, rel
 
 SIDECARS = ('captions.srt', 'transcript.md', 'chapters.txt', 'sources.md')
-STATES = {'planned', 'writing', 'draft', 'rendering', 'review', 'ready', 'blocked'}
+STATES = {'planned', 'frozen', 'writing', 'draft', 'rendering', 'review', 'ready', 'blocked'}
 
 
 def read_yaml(path: Path, optional=False):

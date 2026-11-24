@@ -18,3 +18,5 @@
   "causal_conv1d … falling back" / "Redirects are not supported" warnings come from CUDA-only kernels.
 - PPTX images need Keynote or headless LibreOffice; if both fail, ask for a PDF.
 - `uv run` from inside `$SKILL` is fine, but prefer `$STUDY` so `PYTHONPATH`/cwd handling is right.
+- Any edit to a frozen section's notes.md, lesson.yaml or script.md (even a `pronounce:` line) invalidates `frozen_plan`; `study animate <collection>` then skips it as "planning inputs changed since freeze" for the rest of that queue run, without retrying. Re-run `study checkpoint <section> --freeze` right after the edit, and animate that section separately if the queue already passed it.
+- Independent visual reviewers given the default 6–8-frame sheets report many beats as "missing" that are merely unsampled (a congestion-control run had ~60% false "missing" findings). Before dispatching reviewers, regenerate sheets with `study review <S> --sheet --frames 24 --width 2048` (local, no rebuild) and have fixers classify each finding as confirmed / sampling artifact before editing.

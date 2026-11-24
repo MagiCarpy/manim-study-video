@@ -1,6 +1,6 @@
 # Roles and two-way model fallback
 
-Use the starting provider's column; do not make every worker inherit the coordinator's model. Explicit user choices override project `CLAUDE.md` preferences, which override these defaults. These are task-fit defaults, not guarantees of equal model quality. Check route availability and supported effort before dispatch.
+For Claude/Codex, use the starting provider's column; do not make every worker inherit the coordinator's model. Antigravity/Gemini or other agents may use their existing authorized model and perform roles sequentially when route/delegation controls are absent. These columns are recommendations, not required model IDs, subscriptions or accounts; never install a new provider just to match them. Explicit user choices override project `CLAUDE.md` preferences, which override these defaults. These are task-fit defaults, not guarantees of equal model quality. Check route availability and supported effort before dispatch.
 
 ## Lookup table
 
@@ -8,16 +8,17 @@ Use the starting provider's column; do not make every worker inherit the coordin
 
 | Role | Codex model · effort | Claude model · effort |
 |---|---|---|
-| Coordinator: sectioning, shared brief, consistency | `gpt-6.1-sol` · high | `claude-opus-5-5` · high |
+| Coordinator: sectioning, shared brief, consistency | `gpt-6.2-sol` · high | `claude-opus-5-5` · high |
 | Digester: straightforward slide/diagram extraction | `gpt-6-luna` · low | `claude-haiku-5-5` · low |
-| Section planner: notes, verified trace, storyboard, script | `gpt-6.1-sol` · high | `claude-opus-5-5` · high |
-| Difficult trace / failed-check escalation | `gpt-6-astra` · high | `claude-opus-5-5` · high |
-| Optional narration polish | `gpt-6.1-sol` · high | `claude-sonnet-5-5` · high |
-| Animator: code, layout, draft fixes | `gpt-6.1-sol` · high | `claude-sonnet-5-5` · high |
+| Section planner: notes, verified trace, storyboard, script | `gpt-6.2-sol` · high | `claude-opus-5-5` · high |
+| Difficult trace / failed-check escalation | `gpt-6.2-astra` · high | `claude-opus-5-5` · high |
+| Optional narration polish | `gpt-6.2-sol` · high | `claude-sonnet-5-5` · high |
+| Animator: code, layout, draft fixes (one scene work order each, via `study animate`) | `gpt-6.2-sol` · high | `claude-sonnet-5-5` · high |
+| Section consistency pass after scene work orders | `gpt-6.1-terra` · medium | `claude-sonnet-5-5` · medium |
 | Simple animation pilot, not the general default | `gpt-6.1-terra` · high | `claude-sonnet-5-5` · medium |
 | Independent visual reviewer | `gpt-6.1-terra` · medium | `claude-sonnet-5-5` · medium |
 | Speech triage / clerk: bounded classification and approved edits | `gpt-6-luna` · low | `claude-haiku-5-5` · low |
-| Semantic, numerical or ambiguous speech fix | `gpt-6.1-sol` · high | `claude-sonnet-5-5` · high |
+| Semantic, numerical or ambiguous speech fix | `gpt-6.2-sol` · high | `claude-sonnet-5-5` · high |
 | Extraction, lint, TTS, rendering, assembly, hashes | Local scripts; no LLM | Local scripts; no LLM |
 
 Use a vision-capable route for digesting/review; escalate ambiguous diagrams and `[verify]` values. If Haiku 5.5 is unavailable, Haiku 4.5 with provider-native defaults is a legacy alternative; do not assume its API accepts the same effort parameter. Raise effort or use the difficult-trace row only for a concrete unresolved problem, not every section.

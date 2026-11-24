@@ -9,7 +9,7 @@ class LicenseTests(unittest.TestCase):
         self.assertTrue(path.is_file(),'Missing selected MIT license')
         text=path.read_text()
         self.assertIn('MIT License',text)
-        self.assertIn('make-study-video contributors',text)
+        self.assertIn('manim-study-video contributors',text)
         self.assertIn('Permission is hereby granted',text)
         metadata=tomllib.loads((SKILL_DIR/'pyproject.toml').read_text())
         self.assertEqual(metadata['project']['license'],'MIT')

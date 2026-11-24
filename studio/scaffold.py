@@ -12,6 +12,11 @@ from studio import ingest
 from studio.paths import SKILL_DIR, lesson_dir
 from studio.slides import WARNING, parse_range, read_slides, select_slides, source_dir
 
+# Audio-only respellings every new lesson starts with. Each one fixed a real LFM3 misreading
+# caught by proofreading: a bare "y" was voiced "yay"/"lie" or dropped, and the final "N" of
+# Go-Back-N was dropped. Keys match whole tokens only; captions keep the written form.
+DEFAULT_PRONOUNCE = {'Go-Back-N': 'go-back-en', 'y': 'why'}
+
 
 def section_plan(value: str) -> list[tuple[str, list[int]]]:
     parts = re.split(r',\s*(?=[a-z0-9_-]+\s*:)', value.strip())
@@ -43,13 +48,22 @@ def short_title(source: Path) -> str:
     return Path(title).stem
 
 
-def section_files(slug, numbers, selected, title, deck_title, voice, minutes):
+def default_credits(deck: Path) -> list[str]:
+    """Header lines for `study sources`; the TODO makes it refuse until a person fills in the credit."""
+    return [f'Deck: `{Path(deck).name}` — TODO: course, author, and original credit (e.g. "based on slides by ...").',
+            'Numbering: original deck slide numbers.']
+
+
+def section_files(slug, numbers, selected, title, deck_title, voice, minutes, credits=None):
     scenes = [{'name': f'Slide{s["number"]}Draft', 'chapter': f'Slide {s["number"]}',
                'storyboard': 'TODO'} for s in selected]
     spec = {'title': title, 'slug': slug, 'voice': voice, 'target_minutes': minutes,
             'audience': 'TODO',
             'sources': ['source/slides.md'] + [f'source/slides/slide-{n:03d}.png' for n in numbers],
+            'pronounce': dict(DEFAULT_PRONOUNCE),
             'scenes': scenes}
+    if credits:
+        spec['credits'] = list(credits)
     notes = [f'# Notes — {title}\n\nTODO (draft: verify before rendering)\n',
              '## Audience and prerequisites\nTODO\n',
              '## Purpose and mental model\nTODO\n',
@@ -61,10 +75,12 @@ def section_files(slug, numbers, selected, title, deck_title, voice, minutes):
         notes.append(f'\n### Slide {slide["number"]} [slide {slide["number"]}]\n\n'
                      + slide['text'] + '\n')
     notes.append('\n## Coverage and source map\n\n'
-                 '| Slide | Scene | Locator | Displayed label | Provenance | Actual times |\n'
+                 'One row per sourced beat; `study sources` times rows from the final captions.\n'
+                 'Keep these columns. Scene [blocks] names script blocks: `Ports [01]–[03], [05]` or `Ports (all)`.\n\n'
+                 '| Slide | Scene [blocks] | Locator | Displayed label | Provenance | Actual times |\n'
                  '|---|---|---|---|---|---|\n')
     for n in numbers:
-        notes.append(f'| {n} | Slide{n}Draft | source/slides.md · Slide {n} | {deck_title} · slide {n} | source [slide {n}] | TODO |\n')
+        notes.append(f'| {n} | Slide{n}Draft [01] | source/slides.md · Slide {n} | {deck_title} · slide {n} | source [slide {n}] | TODO |\n')
     notes.append('\n## Added explanations / corrections / external references\nTODO\n'
                  '\n## Teaching storyboard and transitions\nTODO\n')
     code = ['"""Generated draft: replace TODO narration and excerpts before final delivery."""\n',
@@ -121,6 +137,7 @@ Define each term in speech and on screen at first explanatory use. Imported term
 {vocab}
 ## Spoken forms / speech
 TODO: deck-specific pronunciations (put them in each section's lesson.yaml `pronounce:`). Short complete sentences, one idea per block.
+Keep the scaffolded default `pronounce:` entries (see references/voices.md, "LFM3 respellings"); add deck-specific ones beside them.
 Use [pause] between distinct ideas; [[slnc N]] for exact silence. Keep tags off screen/captions.
 
 ## Teaching
@@ -134,11 +151,11 @@ At most one TTS model process (fish or lfm3) globally; CPU drafts/finals use two
 Run foreground commands only. Never remove another worker's lock. Use the section ID as owner.
 Exact commands for the first section (substitute other section paths and owners as needed):
 ```sh
-"$STUDY" build {qsec} --engine say --jobs 2 --frames 6 --lock {lock}/cpu1 --lock {lock}/cpu2 --owner {plan[0][0]}
+"$STUDY" review {qsec} --lint --layout --sheet --lock {lock}/cpu1 --lock {lock}/cpu2 --owner {plan[0][0]}
 "$STUDY" narrate {qsec} --lock {lock}/tts --owner {plan[0][0]}
 "$STUDY" build {qsec} -q h --jobs 2 --cached-only --frames 6 --lock {lock}/cpu1 --lock {lock}/cpu2 --owner {plan[0][0]}
 ```
-Freeze narration after the say draft, narrate once, inspect timing/audio, then render cached-only.
+Freeze the script, then (once final production is authorized) narrate it once in the background so animators time beats against real audio; render cached-only at the end.
 TODO: acceptance review, deliverable paths and checkpoint ownership.
 '''
 
@@ -232,7 +249,8 @@ def main(argv=None):
                 folder = root / 'sections' / sid if collection else root
                 minutes = args.minutes * len(nums) / total
                 files.update({folder / name: text for name, text in section_files(sid, nums, selected[sid],
-                              sid.replace('-', ' ').title() if collection else title, deck_title, voice, minutes).items()})
+                              sid.replace('-', ' ').title() if collection else title, deck_title, voice, minutes,
+                              credits=None if collection else default_credits(deck)).items()})
                 sections.append({'id': sid, 'title': sid.replace('-', ' ').title(),
                                  'path': f'sections/{sid}' if collection else '.',
                                  'inputs': [f'slides {",".join(map(str, nums))}'], 'target_minutes': minutes})
@@ -245,7 +263,7 @@ def main(argv=None):
             if collection:
                 files[root / 'collection.yaml'] = yaml.safe_dump({'title': title, 'quality': 'h', 'voice': voice,
                     'target_minutes': args.minutes, 'source': 'source/slides.md', 'locks': str(locks),
-                    'sections': sections}, sort_keys=False, allow_unicode=True)
+                    'credits': default_credits(deck), 'sections': sections}, sort_keys=False, allow_unicode=True)
             root.mkdir(parents=True, exist_ok=True)
             if (root / 'source').is_symlink():
                 (root / 'source').unlink()

@@ -26,11 +26,11 @@ The brief fixes section order/budgets, voice/quality, notation/colors/examples, 
 Keep model reasoning out of long scripted waits; run deterministic production work directly.
 
 1. **Digest once:** cheap vision extraction; verify ambiguous diagrams before planning.
-2. **Author:** at most `cpu_slots + 1` planner/animator workers. Stop after reviewed say drafts, frozen scripts and `draft` checkpoints.
-3. **Narrate:** after authorization, one background `$STUDY narrate <all sections> --lock $L/tts` process; no worker waiting.
-4. **Triage:** inspect real-engine transcripts and semantic/numeric risks before the final render queue; route approved paired script/code fixes by [roles.md](roles.md). Revoice only changed cache blocks.
+2. **Plan and animate as plans arrive:** after authorizing animation and freezing the shared brief, launch `"$STUDY" animate "$C" --follow --json` once with completion notification. Publish each verified plan via `"$STUDY" checkpoint "$S" --freeze` without waiting for unrelated planners. Add `animation_after: [section-id]` to a section entry only for a real production dependency; the queue waits for those sections' draft checkpoints. For a new reusable layout, inspect one dense representative scene before authorizing reuse. Keep one animation lane; keep planner quota/routing separate where possible. Short fresh work orders, `workorder:` or `--per-order N` for genuinely shared diagrams, then one consistency pass. Checkpoints retain completed scenes. Restart the same command after an interruption or user-confirmed quota reset (exit 3); `animate "$C"` without `--follow` drains only currently ready plans (exit 4 if others are waiting). Exit 5 means a queue already owns the collection; do not launch another lane. If a section stays incomplete, inspect its work order and checkpoint before restarting. Workers stop at draft.
+3. **Narrate:** after authorization, one background `$STUDY narrate <all sections> --lock $L/tts` process; no worker waiting. When finals are authorized up front, start it as soon as scripts freeze, so animators check timing against real audio and proofread triage overlaps animation.
+4. **Triage:** inspect real-engine transcripts and semantic/numeric risks before the final render queue; route approved paired script/code fixes by [roles.md](roles.md). Revoice only changed cache blocks (phrase-level `pronounce:` keys; see voices.md).
 5. **Render:** script `$STUDY build <section> -q h --cached-only --jobs 2 --frames 4 --lock $L/cpu1 --lock $L/cpu2 --owner <id>` for each section. Spawn a fixer only for actual final-review defects; rerender affected scenes after dependency checks.
-6. **Package:** clerk handles validated checkpoints/source-map time ranges; scripts assemble accepted videos.
+6. **Package:** clerk handles validated checkpoints/source-map time ranges; scripts assemble accepted videos. Do packaging, timed `sources.md` (`$STUDY sources`) and assembly checks with scripts or a cheap clerk, not strong-model coordinator turns. Driving them by hand cost about a third of a 5-hour window on one 7-section lecture.
 
 Use background completion notifications, not polling turns. Keep logs and short summaries rather than dumping whole scene files. Role models, two-way provider fallback and attempt records live only in [roles.md](roles.md).
 
@@ -134,11 +134,9 @@ Keep section checkpoints at `draft`. Audit exact order/count, input freshness, s
 
 Keep each section's MP4 and sidecars, including `sources.md`, as deliverables. Source labels
 are baked into the section video and survive concatenation; preserve their original source
-identifiers and slide numbers. The coordinator creates a combined `sources.md` by shifting
-each section's source-map time ranges by its actual start time in the final video, retaining
-section IDs, original locators, and full references. Do not shift source numbers. The existing
-assembler does not merge these maps: do this explicitly after assembly, using measured clip
-lengths and checking joins. Preserve individual maps and include the combined map in the
+identifiers and slide numbers. After assembly, `$STUDY sources <collection> --combined` writes the combined `sources.md`,
+shifting each section's measured rows by the video's chapter starts (one chapter per section)
+and keeping section IDs, original locators and references. Do not shift source numbers. Preserve individual maps and include the combined map in the
 accepted combined revision/checkpoint. Any newly rendered introduction or recap also needs
 its own citations and mapping. Combine only the manifest's ordered,
 accepted revisions, after checking consistent video/audio encoding, resolution, frame rate,

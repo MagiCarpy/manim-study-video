@@ -738,7 +738,7 @@ def main(argv=None) -> int:
     ap.add_argument("--no-render", action="store_true", help="skip rendering; just assemble / dump frames")
     ap.add_argument("--verbose", "-v", action="store_true", help="show Manim's own logs, progress and lock messages")
     ap.add_argument("--review", "--layout", dest="review", action="store_true",
-                    help="record layout snapshots for `study review --layout` (needs -q l, --engine say, all scenes)")
+                    help="record layout snapshots for `study review --layout` (needs -q l and --engine say)")
     args = ap.parse_args(argv)
     global VERBOSE
     VERBOSE = args.verbose
@@ -777,33 +777,36 @@ def main(argv=None) -> int:
                 else:
                     note(f"Narration: all {report['hits']} {voice['engine']} lines cached")
         jobs = max(1, min(jobs, len(names)))
-        # Layout snapshots for `study review`: only a full 480p say draft is comparable to review's own build.
-        record = args.review and not args.scene and args.quality == "l" and voice["engine"] == "say"
+        # A 480p say draft can provide layout evidence for all or selected scenes.
+        record = args.review and args.quality == "l" and voice["engine"] == "say"
         if args.review and not record:
-            print("note: --review skipped (needs -q l, --engine say and all scenes); review will rebuild its draft")
+            print("note: --review skipped (needs -q l and --engine say); review will rebuild its draft")
+        from studio import review as review_tools
         review_key = None
-        if record:
-            from studio import review as review_tools
-            review_key = review_tools.fingerprint(lesson_dir)  # before rendering, so edits during the build are caught
-            out = lesson_dir / "build" / "review"
-            out.mkdir(parents=True, exist_ok=True)
-            (out / "layout-cache.json").unlink(missing_ok=True)
-            os.environ["STUDIO_LAYOUT"] = str(out / "layout.jsonl")
         lock = None
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))  # run the finally block on kill
         try:
             lock = acquire_lock(args.lock, args.owner or lesson_dir.name) if args.lock else None
+            if record:
+                review_key = review_tools.fingerprint(lesson_dir)
+                out = review_tools.review_dir(lesson_dir)
+                out.mkdir(parents=True, exist_ok=True)
+                for name, snapshot in zip(names, review_tools.layout_files(lesson_dir, names)):
+                    review_tools.layout_manifest(lesson_dir, name).unlink(missing_ok=True)
+                    snapshot.unlink(missing_ok=True)
+                os.environ["STUDIO_LAYOUT"] = str(out / "layout.jsonl")
             failed = render_all(lesson_dir, names, args.quality, voice, jobs, args.verbose, args.cached_only)
+            if review_key is not None:
+                successful = [name for name in names if name not in failed]
+                if successful and review_tools.record_layout(lesson_dir, spec, review_key, "say", successful):
+                    note("layout snapshots recorded for `study review --layout`")
+                elif successful:
+                    problems.append("layout snapshots missing or inputs changed during render")
         finally:
             for proc in list(_CHILDREN):  # interrupted: don't leave orphan renders behind
                 proc.terminate()
             release_lock(lock)
             os.environ.pop("STUDIO_LAYOUT", None)
-        if record and not failed:
-            if review_tools.record_layout(lesson_dir, spec, review_key, "say"):
-                note("layout snapshots recorded for `study review --layout`")
-            else:
-                problems.append("layout snapshots not recorded (each scene must inherit StudyScene and play/wait)")
     render_s = time.time() - t0
     if failed:
         print(f"\nRender FAILED for: {', '.join(failed)} (logs: "

@@ -158,6 +158,15 @@ High-level layouts: see references/cslib-patterns.md for examples and constraint
 ```
 
 ## Helper list (semantic notes) (`from studio.cslib import ...`)
+
+Layout primitives (never redefine per section; review warns `redefined_helper`):
+- `P(x, y)`; `panel(w, h, color=DIM, fill=PANEL, opacity=1, radius=.12, stroke=2)`.
+- `text_at(text, x, y, size=24, color=FG, mono=False, align=LEFT)`; `rich_text([(text, color), ...], size=22, mono=False)` → one Text.
+- `boxed(text, w, h, ...)` (box grows, text never shrinks); `card(text, width, color=DIM, size=24)` → VGroup(box, lines), wrapped, no orphan word.
+- `host(name, sub=None, color=BLUE)`; `pill(text, color=GOLD)`; `mark(ok)` → ✓/✗.
+- `arrow(a, b, color=FG, dashed=False, both=False)` → `.shaft`, `.head`, `.tail_head`; tip lands on `b`, fixed head size.
+- `bracket(x, y0, y1, side=LEFT)`; `later(delay, *anims)`; `appear(mob, run_time=.15)`.
+- All refuse text size < 20 (ValueError): enlarge the container instead.
 - `definition_card(term, meaning)`: wrapped vocabulary definition before mechanics.
 - `slide_excerpt(scene, path, regions, tag_text, hold=1)`: cited highlights with cleanup.
 - `PrefixTable` / `ForwardingTable`: measured prefix rows and longest-match animations.
@@ -176,11 +185,31 @@ High-level layouts: see references/cslib-patterns.md for examples and constraint
   `.clear_highlight()`, `.set_cell(r, c, value)` → anims; `.cell(r, c)`.
 - `Gantt([(label, start, end), ...], unit=0.8, title=None)`; `.axis_animation()`,
   `.block_animations()`, `.build()`.
+- `Timeline(participants, x=None, top=2.6, bottom=-3.0, row=0.85, slant=0.3, subtitles=None)`:
+  preferred for protocol exchanges. `.create()`; `m = .message(row, src, dst, text_or_[(text, color)],
+  kind="genuine"|"old"|"retransmit", lost_at=None)` builds without showing; `m.travel(run_time,
+  upto=1.0, start=None)` animates (stop part-way, resume on a later bookmark); `m.relabel(text)`;
+  `m.retint(color)`; `.note(row, participant, text, at="end"|"start")`; `.legend(kinds)`; `.clear(*msgs)`.
+  Rows sit at fixed heights; a row arriving below `bottom` raises ValueError.
 - `SequenceDiagram(participants, width=8, height=5.5)`; `.create()`;
-  `anim, arrow = .message(src, dst, text)`; `anim, lbl = .note(participant, text)`.
+  `anim, arrow = .message(src, dst, text)`; `anim, lbl = .note(participant, text)` (older, simpler).
+- `cross_fade(old, new, run_time=0.6)`: replace text in place by fading; `beat(t, mark=None, floor=0.3)`:
+  seconds until a bookmark or the narration's end.
 - `SlideImage(path, height=6)`; `.highlight(x0, y0, x1, y1)` → Rectangle; `.region_point(fx, fy)`.
 - `source_tag(text, corner=DOWN+RIGHT)` → small DIM citation Text in a safe-area corner.
-- `StudyScene` (`studio.base`): `.section_title(title, subtitle=None)`, `.clear_all()`.
+- `StudyScene` (`studio.base`): `.section_title(title, subtitle=None)`, `.clear_all()`, `.wait_for(t, mark=None)`.
+
+## Protocol timelines
+
+```python
+tl = Timeline(("Client", "Server"), subtitles=(None, "(listening)"))
+self.play(tl.create())
+syn = tl.message(0, "Client", "Server", [("SYN", style.GOLD), ("seq 1000", style.FG)])
+ack = tl.message(1, "Server", "Client", "ACK 1001", lost_at=0.55)        # stops short + ✗
+with self.voiceover(text="The client sends a SYN. <bookmark mark='r'/>The reply is lost.") as t:
+    self.play(syn.travel(run_time=beat(t, "r")))
+    self.play(ack.travel(run_time=beat(t)), FadeIn(tl.note(0, "Server", "SYN_RCVD")))
+```
 
 ## Beat helpers (motion while the narration explains)
 
@@ -217,3 +246,30 @@ self.play(FadeIn(eq)); self.play(eq.reveal(0)); self.play(eq.reveal(2, 4))
 - Built-ins worth using: `TransformFromCopy(value, cell)` (value moves into a table/field),
   `FadeTransform(a, b)` for unlike shapes, `rate_func=linear` for constant-speed travel,
   `LaggedStart(..., lag_ratio=.3)` to stretch a build-up over a sentence.
+
+## Code, syntax trees and scopes (programming-language lectures)
+
+```python
+code = CodeListing(SRC / "interpreter.py", 214, 227, max_chars=48, skip=[(217, 221)]).to_edge(LEFT)
+self.play(FadeIn(code)); self.play(code.highlight(215)); self.play(code.highlight(223, 224))
+snippet = CodeListing.from_text('[func main [] [print [add2 40]]]', language="brewin", numbers=False)
+tree = ASTTree(AST("fcall", AST("qname", value="print", field="fn"),
+                   AST("int", value="40", field="args", key="forty"), key="call"))
+self.play(tree.grow()); self.play(tree.visit("forty"))
+pill, anim = tree.result("forty", "40"); self.play(anim); self.play(tree.carry(pill, "call"))
+env = ScopeStack(x=4.4, bottom=-2.9, width=3.8)      # -2.9 clears a one-line SourceTag; compact=True for deep stacks
+self.play(env.push_frame("main")); self.play(env.define("x", "5")); self.play(env.push_block())
+anim, hit = env.lookup("x"); self.play(anim)      # innermost block first, current frame only
+```
+
+`CodeListing` reads the real file, keeps original line numbers and relative indentation,
+colours keywords PURPLE, strings/numbers GOLD and comments DIM, and elides lines past
+`max_chars` with "…"; it also elides further to fit `max_width` (default 13, ~6.5 for a half), so width never raises. Blank lines are safe (non-Text placeholders).
+`skip=[(a, b)]` collapses ranges to one "⋮" row. One highlight bar moves between ranges.
+`ASTTree` lays out a tidy top-down tree (fcall BLUE, qname TEAL, literals GOLD, others
+PURPLE); `field=` labels the edge into a child. It raises if the tree cannot fit at ≥20 pt:
+drop wrapper nodes (program/func) or show a subtree. `visit` moves one evaluation cursor
+and animates whole nodes so labels stay visible; `result`/`carry` show returned values.
+`ScopeStack` draws function frames (newest on top, BLUE border) holding blocks (innermost on
+top); `push_frame(title, blocks=[[(name, value)], ...])` installs prepared blocks (e.g. a
+closure's captured blocks plus a parameter layer). Every operation re-flows the stack.

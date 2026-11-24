@@ -140,6 +140,16 @@ class StudyScene(VoiceoverScene):
         if self.mobjects:
             self.play(*[FadeOut(m) for m in self.mobjects], run_time=run_time)
 
+    def wait_for(self, t, mark: str | None = None, min_gap: float = 0.05):
+        """Wait until bookmark `mark` (or the narration's end); skip gaps under min_gap.
+
+        with self.voiceover(text="Here it is. <bookmark mark='b'/>And here.") as t:
+            self.play(FadeIn(a)); self.wait_for(t, "b"); self.play(FadeIn(b)); self.wait_for(t)
+        """
+        d = t.time_until_bookmark(mark) if mark else t.get_remaining_duration()
+        if d > min_gap:
+            self.wait(d)
+
 
 class DryTracker:
     """Stand-in for manim-voiceover's VoiceoverTracker on the dry-run clock."""
